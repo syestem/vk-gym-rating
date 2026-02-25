@@ -1,0 +1,48 @@
+:root {
+  --bg:#f5f6f8; --card:#fff; --text:#000; --muted:#6d7885; --border:#e1e3e6;
+}
+body.dark {
+  --bg:#141414; --card:#1f1f1f; --text:#fff; --muted:#aaa; --border:#2c2c2c;
+}
+body {
+  margin:0; padding:16px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+  background:var(--bg); color:var(--text);
+}
+.card { background:var(--card); border-radius:12px; padding:16px; }
+.controls {
+  display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;
+  align-items:center;
+}
+button, select {
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid var(--border);
+  background:var(--card);
+  color:var(--text);
+  cursor:pointer;
+}
+button:disabled { opacity:.5; cursor:not-allowed; }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th,td { padding:8px; border-bottom:1px solid var(--border); text-align:center; }
+td.name { text-align:left; }
+tr.top-1{background:rgba(255,215,0,.15)}
+tr.top-2{background:rgba(192,192,192,.15)}
+tr.top-3{background:rgba(205,127,50,.15)}
+a{color:#2a5885;text-decoration:none}
+body.dark a{color:#71a7ff}
+
+.spinner {
+  width:28px;height:28px;
+  border:3px solid var(--border);
+  border-top-color:#2a5885;
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+  margin:12px auto;
+}
+@keyframes spin { to { transform:rotate(360deg) } }
+
+.loading table {
+  opacity:.4;
+  pointer-events:none;
+}
