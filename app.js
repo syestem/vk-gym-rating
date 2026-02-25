@@ -265,7 +265,9 @@ document
       alert('Ошибка обновления виджета');
     }
   });
-
+// ⚠️ ТОЛЬКО ДЛЯ ЛОКАЛЬНОГО ТЕСТА
+isAdmin = true;
+document.getElementById('updateWidgetBtn').style.display = 'block';
 async function buildWidgetPayload() {
   // сбор данных
   // берём текущий отображаемый набор данных
