@@ -46,3 +46,13 @@ body.dark a{color:#71a7ff}
   opacity:.4;
   pointer-events:none;
 }
+/* активный месяц */
+.month-indicator {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.month-indicator b {
+  color: var(--text);
+}
