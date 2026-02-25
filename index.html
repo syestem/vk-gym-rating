@@ -12,37 +12,45 @@
 <body>
 
 <div class="card">
-  <h2>Рейтинг посещаемости</h2>
-  <div class="month-indicator">
-    Текущий период: <b id="currentPeriod"></b><br>
-    Отображается: <b id="activeView"></b>
+  <div class="header">
+    <h2>Рейтинг посещаемости</h2>
+    <div class="month-indicator">
+      Текущий период: <b id="currentPeriod"></b><br>
+      Отображается: <b id="activeView"></b>
+    </div>
   </div>
+
   <div class="controls">
-    <button id="prev">←</button>
-    <select id="monthSelect"></select>
-    <button id="next">→</button>
+    <div class="month-nav">
+      <button id="prev" class="icon-btn">‹</button>
+      <select id="monthSelect"></select>
+      <button id="next" class="icon-btn">›</button>
+    </div>
 
     <select id="facultySelect">
       <option value="all">Все факультеты</option>
     </select>
-    <button id="allTime">За всё время</button>
+
+    <button id="allTime" class="primary">За всё время</button>
   </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Участник</th>
-        <th>Факультет</th>
-        <th>Зал</th>
-        <th>Бассейн</th>
-        <th>Итого</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Участник</th>
+          <th>Факультет</th>
+          <th>Зал</th>
+          <th>Бассейн</th>
+          <th>Итого</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
 
-  <div id="loader"></div>
+  <div id="loader" class="loader"></div>
 </div>
 
 <script src="utils.js"></script>
