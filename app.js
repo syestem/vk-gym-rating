@@ -289,20 +289,24 @@ async function buildWidgetPayload() {
 }
 
 async function updateWidget(token, payload) {
-  const params = new URLSearchParams({
-    type: 'table',
-    code: JSON.stringify(payload),
-    access_token: token,
-    v: '5.199'
-  });
+  const url =
+    'https://api.vk.com/method/appWidgets.update' +
+    '?type=table' +
+    '&code=' + encodeURIComponent(JSON.stringify(payload)) +
+    '&access_token=' + token +
+    '&v=5.199';
 
-  const res = await fetch(
-    'https://api.vk.com/method/appWidgets.update',
-    {
-      method: 'POST',
-      body: params
-    }
-  );
+  const res = await fetch(url);
+  const json = await res.json();
+
+  console.log('VK response:', json);
+
+  if (json.error) {
+    throw json.error;
+  }
+
+  return json.response;
+}
 
   const json = await res.json();
 
