@@ -52,7 +52,6 @@
 </table>
 
 <script>
-  // Инициализация VK Mini App
   vkBridge.send('VKWebAppInit');
 
   const SHEET_URL =
@@ -61,50 +60,43 @@
   fetch(SHEET_URL)
     .then(r => r.text())
     .then(text => {
-      // 1. Убираем BOM
+      // убираем BOM
       text = text.replace(/^\uFEFF/, '');
 
-      // 2. Делим строки правильно (Windows / Unix)
       const lines = text.split(/\r?\n/);
-
-      // 3. Убираем заголовок
-      const rows = lines.slice(1);
-
       const tbody = document.querySelector('#rating tbody');
-      if (!tbody) {
-        console.error('tbody not found');
-        return;
-      }
+      if (!tbody) return;
 
-      rows.forEach((row, index) => {
-        if (!row.trim()) return;
+      // пропускаем заголовок
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
 
-        // 4. Разделитель ;
-        const parts = row.split(';');
+        // CSV у тебя с запятыми
+        const cols = line.split(',');
 
-        if (parts.length < 5) {
-          console.warn('Bad row:', row);
-          return;
-        }
+        // нам нужны ТОЛЬКО первые 5 колонок
+        const vkUrl = cols[0]?.trim();
+        const name  = cols[1]?.trim();
+        const gym   = cols[2]?.trim();
+        const pool  = cols[3]?.trim();
+        const total = cols[4]?.trim();
 
-        const vkUrl = parts[0].trim();
-        const name = parts[1].trim();
-        const gym = parts[2].trim();
-        const pool = parts[3].trim();
-        const total = parts[4].trim();
+        // если нет ссылки или имени — это служебная строка
+        if (!vkUrl || !vkUrl.startsWith('https://vk.com')) continue;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${index + 1}</td>
+          <td>${tbody.children.length + 1}</td>
           <td><a href="${vkUrl}" target="_blank">${name}</a></td>
           <td>${gym}</td>
           <td>${pool}</td>
           <td><b>${total}</b></td>
         `;
         tbody.appendChild(tr);
-      });
+      }
     })
-    .catch(err => console.error('Ошибка загрузки CSV:', err));
+    .catch(err => console.error('CSV error:', err));
 </script>
 
 </body>
