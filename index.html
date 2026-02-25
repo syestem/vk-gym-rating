@@ -9,70 +9,38 @@
 
   <style>
     :root {
-      --bg: #f5f6f8;
-      --card: #ffffff;
-      --text: #000000;
-      --muted: #6d7885;
-      --border: #e1e3e6;
+      --bg:#f5f6f8; --card:#fff; --text:#000; --muted:#6d7885; --border:#e1e3e6;
     }
-
     body.dark {
-      --bg: #141414;
-      --card: #1f1f1f;
-      --text: #ffffff;
-      --muted: #aaaaaa;
-      --border: #2c2c2c;
+      --bg:#141414; --card:#1f1f1f; --text:#fff; --muted:#aaa; --border:#2c2c2c;
     }
-
     body {
-      margin: 0;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
-      background: var(--bg);
-      color: var(--text);
+      margin:0; padding:16px;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
+      background:var(--bg); color:var(--text);
     }
-
-    .card {
-      background: var(--card);
-      border-radius: 12px;
-      padding: 16px;
-    }
-
+    .card { background:var(--card); border-radius:12px; padding:16px; }
     .controls {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
+      display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;
+      align-items:center;
     }
-
-    select {
-      padding: 6px 8px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--card);
-      color: var(--text);
+    button, select {
+      padding:6px 10px;
+      border-radius:6px;
+      border:1px solid var(--border);
+      background:var(--card);
+      color:var(--text);
+      cursor:pointer;
     }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-    }
-
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid var(--border);
-      text-align: center;
-    }
-
-    td.name { text-align: left; }
-
-    tr.top-1 { background: rgba(255,215,0,.15); }
-    tr.top-2 { background: rgba(192,192,192,.15); }
-    tr.top-3 { background: rgba(205,127,50,.15); }
-
-    a { color: #2a5885; text-decoration: none; }
-    body.dark a { color: #71a7ff; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th,td { padding:8px; border-bottom:1px solid var(--border); text-align:center; }
+    td.name { text-align:left; }
+    tr.top-1{background:rgba(255,215,0,.15)}
+    tr.top-2{background:rgba(192,192,192,.15)}
+    tr.top-3{background:rgba(205,127,50,.15)}
+    a{color:#2a5885;text-decoration:none}
+    body.dark a{color:#71a7ff}
+    .loader{color:var(--muted);text-align:center;padding:12px}
   </style>
 </head>
 
@@ -82,7 +50,10 @@
   <h2>Рейтинг посещаемости</h2>
 
   <div class="controls">
+    <button id="prev">←</button>
     <select id="monthSelect"></select>
+    <button id="next">→</button>
+
     <select id="facultySelect">
       <option value="all">Все факультеты</option>
     </select>
@@ -101,6 +72,8 @@
     </thead>
     <tbody id="tbody"></tbody>
   </table>
+
+  <div id="loader" class="loader"></div>
 </div>
 
 <script>
@@ -108,108 +81,136 @@
 
   vkBridge.subscribe(e => {
     if (e.detail.type === 'VKWebAppUpdateConfig') {
-      document.body.classList.toggle(
-        'dark',
-        e.detail.data.scheme.includes('dark')
-      );
+      document.body.classList.toggle('dark', e.detail.data.scheme.includes('dark'));
     }
   });
 
   const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
-
-  const MONTHS = {
-    'Февраль 2026': 2092021629,
-    'Январь 2026': 1935263010
-  };
-
+  const tbody = document.getElementById('tbody');
+  const loader = document.getElementById('loader');
   const monthSelect = document.getElementById('monthSelect');
   const facultySelect = document.getElementById('facultySelect');
-  const tbody = document.getElementById('tbody');
 
-  Object.keys(MONTHS).forEach(m => {
-    const o = document.createElement('option');
-    o.value = m;
-    o.textContent = m;
-    monthSelect.appendChild(o);
-  });
+  let months = [];
+  let monthIndex = 0;
+  let allData = [];
+  let visibleCount = 30;
 
-  monthSelect.addEventListener('change', loadMonth);
-  facultySelect.addEventListener('change', render);
+  fetch('./months.json')
+    .then(r => r.json())
+    .then(json => {
+      months = Object.entries(json);
+      months.forEach(([name], i) => {
+        const o = document.createElement('option');
+        o.value = i;
+        o.textContent = name;
+        monthSelect.appendChild(o);
+      });
 
-  let currentData = [];
+      // автоопределение текущего месяца
+      const now = new Date();
+      const ruMonth = now.toLocaleString('ru-RU', { month:'long' });
+      const ruYear = now.getFullYear();
+      const autoName = ruMonth.charAt(0).toUpperCase()+ruMonth.slice(1)+' '+ruYear;
+
+      const found = months.findIndex(m => m[0] === autoName);
+      monthIndex = found >= 0 ? found : months.length - 1;
+
+      monthSelect.value = monthIndex;
+      loadMonth();
+    });
+
+  document.getElementById('prev').onclick = () => {
+    if (monthIndex > 0) {
+      monthIndex--;
+      monthSelect.value = monthIndex;
+      loadMonth();
+    }
+  };
+  document.getElementById('next').onclick = () => {
+    if (monthIndex < months.length - 1) {
+      monthIndex++;
+      monthSelect.value = monthIndex;
+      loadMonth();
+    }
+  };
+  monthSelect.onchange = () => {
+    monthIndex = Number(monthSelect.value);
+    loadMonth();
+  };
+  facultySelect.onchange = () => render(true);
 
   function loadMonth() {
-    const month = monthSelect.value;
-    const gid = MONTHS[month];
+    loader.textContent = 'Загрузка данных…';
+    tbody.innerHTML = '';
+    facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+    allData = [];
+    visibleCount = 30;
 
+    const gid = months[monthIndex][1];
     fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`)
       .then(r => r.text())
       .then(text => {
         text = text.replace(/^\uFEFF/, '');
-        currentData = [];
         const faculties = new Set();
 
         text.split(/\r?\n/).slice(1).forEach(line => {
-          if (!line.trim()) return;
           const c = line.split(',');
-
           if (!c[0]?.startsWith('https://vk.com')) return;
 
-          currentData.push({
-            vkUrl: c[0],
-            name: c[1],
-            faculty: c[2],
-            gym: Number(c[3]),
-            pool: Number(c[4]),
-            total: Number(c[5])
+          allData.push({
+            vkUrl:c[0], name:c[1], faculty:c[2],
+            gym:+c[3], pool:+c[4], total:+c[5]
           });
-
           faculties.add(c[2]);
         });
 
-        facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
         faculties.forEach(f => {
           const o = document.createElement('option');
-          o.value = f;
-          o.textContent = f;
+          o.value = f; o.textContent = f;
           facultySelect.appendChild(o);
         });
 
-        render();
+        render(true);
       });
   }
 
-  function render() {
-    tbody.innerHTML = '';
+  function render(reset=false) {
+    if (reset) tbody.innerHTML = '';
+    loader.textContent = '';
+
     const faculty = facultySelect.value;
+    let data = allData.filter(r => faculty === 'all' || r.faculty === faculty);
+    data.sort((a,b)=>b.total-a.total);
 
-    let data = [...currentData];
-    if (faculty !== 'all') {
-      data = data.filter(r => r.faculty === faculty);
-    }
-
-    data.sort((a, b) => b.total - a.total);
-
-    data.forEach((r, i) => {
-      const tr = document.createElement('tr');
-      if (i === 0) tr.classList.add('top-1');
-      if (i === 1) tr.classList.add('top-2');
-      if (i === 2) tr.classList.add('top-3');
-
-      tr.innerHTML = `
-        <td>${i + 1}</td>
-        <td class="name"><a href="${r.vkUrl}" target="_blank">${r.name}</a></td>
-        <td>${r.faculty}</td>
-        <td>${r.gym}</td>
-        <td>${r.pool}</td>
-        <td><b>${r.total}</b></td>
-      `;
-      tbody.appendChild(tr);
+    data.slice(0, visibleCount).forEach((r,i) => {
+      if (reset || i >= tbody.children.length) {
+        const tr = document.createElement('tr');
+        if (i===0) tr.classList.add('top-1');
+        if (i===1) tr.classList.add('top-2');
+        if (i===2) tr.classList.add('top-3');
+        tr.innerHTML = `
+          <td>${i+1}</td>
+          <td class="name"><a href="${r.vkUrl}" target="_blank">${r.name}</a></td>
+          <td>${r.faculty}</td>
+          <td>${r.gym}</td>
+          <td>${r.pool}</td>
+          <td><b>${r.total}</b></td>`;
+        tbody.appendChild(tr);
+      }
     });
+
+    if (visibleCount < data.length) {
+      loader.textContent = 'Прокрутите вниз для загрузки…';
+    }
   }
 
-  // старт — первый месяц
-  loadMonth();
+  window.addEventListener('scroll', () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+      visibleCount += 20;
+      render();
+    }
+  });
 </script>
 
 </body>
