@@ -211,10 +211,13 @@ function rebuildFaculties() {
     facultySelect.appendChild(o);
   });
 
-  if (!available.has(selectedFaculty)) {
-    selectedFaculty = 'all';
-  }
+  // если выбранного факультета нет в месяце — оставляем выбор,
+// но select визуально переводим в "Все факультеты"
+if (!available.has(selectedFaculty)) {
+  facultySelect.value = 'all';
+} else {
   facultySelect.value = selectedFaculty;
+}
 }
 
 facultySelect.onchange = () => {
@@ -231,7 +234,10 @@ function render() {
   const data = allData
     .filter(r => selectedFaculty === 'all' || r.faculty === selectedFaculty)
     .sort((a, b) => b.total - a.total);
-
+if (data.length === 0) {
+  tbody.innerHTML = '<tr><td colspan="6">Нет данных за этот период</td></tr>';
+  return;
+}
   tbody.innerHTML = '';
   data.forEach((r, i) => {
     const tr = document.createElement('tr');
