@@ -37,13 +37,33 @@ fetch('./months.json')
       monthSelect.appendChild(o);
     });
 
-    const saved = Number(localStorage.getItem('monthIndex'));
-    if (!Number.isNaN(saved) && saved < months.length) {
-      monthIndex = saved;
-    }
+    // 1. пытаемся восстановить сохранённый месяц
+const savedRaw = localStorage.getItem('monthIndex');
+let restored = false;
 
-    monthSelect.value = monthIndex;
-    loadMonth();
+if (savedRaw !== null) {
+  const saved = Number(savedRaw);
+  if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
+    monthIndex = saved;
+    restored = true;
+  }
+}
+
+// 2. если сохранённого нет — определяем текущий месяц
+if (!restored) {
+  const now = new Date();
+  const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
+  const ruYear = now.getFullYear();
+  const autoName =
+    ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
+
+  const found = months.findIndex(m => m[0] === autoName);
+  monthIndex = found >= 0 ? found : months.length - 1;
+}
+
+// 3. запускаем загрузку
+monthSelect.value = monthIndex;
+loadMonth();
   });
 
 // ---------- НАВИГАЦИЯ ----------
