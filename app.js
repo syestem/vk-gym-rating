@@ -39,7 +39,6 @@ let monthIndex = 0;
 let allData = [];
 let selectedFaculty = 'all';
 let abortController = null;
-let mode = 'month'; // month | all
 
 /* ===============================
    CURRENT CALENDAR MONTH
@@ -89,8 +88,8 @@ if (todayIndex !== -1) {
 /* ===============================
    NAVIGATION
 ================================ */
-prevBtn.onclick = () => mode === 'month' && changeMonth(-1);
-nextBtn.onclick = () => mode === 'month' && changeMonth(1);
+prevBtn.onclick = () => changeMonth(-1);
+nextBtn.onclick = () => changeMonth(1);
 
 monthSelect.onchange = () => {
   mode = 'month';
@@ -99,7 +98,6 @@ monthSelect.onchange = () => {
 };
 
 allTimeBtn.onclick = () => {
-  mode = 'all';
   loadAllTime();
 };
 
