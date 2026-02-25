@@ -289,7 +289,6 @@ async function buildWidgetPayload() {
 }
 
 async function updateWidget(token, payload) {
-  // вызов VK API
   const params = new URLSearchParams({
     type: 'table',
     code: JSON.stringify(payload),
@@ -306,7 +305,16 @@ async function updateWidget(token, payload) {
   );
 
   const json = await res.json();
+
+  console.log('VK appWidgets.update response:', json);
+
   if (json.error) {
+    alert(
+      'VK error:\n' +
+      JSON.stringify(json.error, null, 2)
+    );
     throw json.error;
   }
+
+  return json.response;
 }
