@@ -61,18 +61,37 @@
   fetch(SHEET_URL)
     .then(r => r.text())
     .then(text => {
-      console.log('CSV:', text);
+      // 1. Убираем BOM
+      text = text.replace(/^\uFEFF/, '');
 
-      const rows = text.trim().split('\n').slice(1);
+      // 2. Делим строки правильно (Windows / Unix)
+      const lines = text.split(/\r?\n/);
+
+      // 3. Убираем заголовок
+      const rows = lines.slice(1);
+
       const tbody = document.querySelector('#rating tbody');
+      if (!tbody) {
+        console.error('tbody not found');
+        return;
+      }
 
       rows.forEach((row, index) => {
         if (!row.trim()) return;
 
+        // 4. Разделитель ;
         const parts = row.split(';');
-        if (parts.length < 5) return;
 
-        const [vkUrl, name, gym, pool, total] = parts;
+        if (parts.length < 5) {
+          console.warn('Bad row:', row);
+          return;
+        }
+
+        const vkUrl = parts[0].trim();
+        const name = parts[1].trim();
+        const gym = parts[2].trim();
+        const pool = parts[3].trim();
+        const total = parts[4].trim();
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -85,7 +104,7 @@
         tbody.appendChild(tr);
       });
     })
-    .catch(err => console.error('Ошибка:', err));
+    .catch(err => console.error('Ошибка загрузки CSV:', err));
 </script>
 
 </body>
