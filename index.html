@@ -7,13 +7,16 @@
   fetch(SHEET_URL)
     .then(r => r.text())
     .then(text => {
-      const rows = text.split('\n').slice(1);
+      const rows = text.trim().split('\n').slice(1);
       const tbody = document.querySelector('#rating tbody');
 
       rows.forEach((row, index) => {
         if (!row.trim()) return;
 
-        const [vkUrl, name, gym, pool, total] = row.split(',');
+        const parts = row.split(';');
+        if (parts.length < 5) return;
+
+        const [vkUrl, name, gym, pool, total] = parts;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -26,5 +29,5 @@
         tbody.appendChild(tr);
       });
     })
-    .catch(err => console.error(err));
+    .catch(err => console.error('CSV error:', err));
 </script>
