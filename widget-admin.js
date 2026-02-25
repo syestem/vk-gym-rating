@@ -53,14 +53,13 @@ function buildWidgetPayload() {
 }
 
 async function updateWidget(token, payload) {
-  const url =
-    'https://api.vk.com/method/appWidgets.update' +
-    '?type=table' +
-    '&code=' + encodeURIComponent(JSON.stringify(payload)) +
-    '&access_token=' + token +
-    '&v=5.199';
-
-  const res = await fetch(url);
-  const json = await res.json();
-  if (json.error) throw json.error;
+  return vkBridge.send('VKWebAppCallAPIMethod', {
+    method: 'appWidgets.update',
+    params: {
+      type: 'table',
+      code: JSON.stringify(payload),
+      access_token: token,
+      v: '5.199'
+    }
+  });
 }
