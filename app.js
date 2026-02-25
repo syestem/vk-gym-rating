@@ -227,7 +227,10 @@ facultySelect.onchange = () => {
 };
 // === WIDGET UPDATE (ADMIN ONLY) ===
 let isAdmin = false;
-
+vkBridge.send('VKWebAppGetLaunchParams')
+  .then(params => {
+    alert(JSON.stringify(params, null, 2));
+  });
 vkBridge.send('VKWebAppGetLaunchParams')
   .then(params => {
     // viewer_group_role приходит ТОЛЬКО если приложение открыто из сообщества
