@@ -1,0 +1,78 @@
+// 1. Исходные данные
+var data = [
+    { screen: "shurickog",    faculty: "",   gym: 0,  pool: 0 }
+];
+
+// 2. Получаем пользователей
+var ids = [];
+var i = 0;
+while (i < data.length) {
+    ids.push(data[i].screen);
+    i = i + 1;
+}
+
+var users = API.users.get({ user_ids: ids });
+
+// 3. Собираем строки
+var rows = [];
+i = 0;
+while (i < users.length) {
+    rows.push({
+        id: users[i].id,
+        name: users[i].first_name + " " + users[i].last_name,
+        faculty: data[i].faculty,
+        gym: data[i].gym,
+        pool: data[i].pool,
+        total: data[i].gym + data[i].pool
+    });
+    i = i + 1;
+}
+
+// 4. Ручная сортировка по total (убывание)
+var sorted = [];
+while (rows.length > 0) {
+    var maxIndex = 0;
+    var j = 1;
+    while (j < rows.length) {
+        if (rows[j].total > rows[maxIndex].total) {
+            maxIndex = j;
+        }
+        j = j + 1;
+    }
+    sorted.push(rows[maxIndex]);
+    rows.splice(maxIndex, 1);
+}
+
+// 5. Формируем тело таблицы (топ-5)
+var body = [];
+i = 0;
+while (i < sorted.length && i < 5) {
+    body.push([
+        {
+            icon_id: "id" + sorted[i].id,
+            text: sorted[i].name,
+            url: "vk.com/id" + sorted[i].id
+        },
+        { text: sorted[i].faculty },
+        { text: "" + sorted[i].gym },
+        { text: "" + sorted[i].pool },
+        { text: "" + sorted[i].total }
+    ]);
+    i = i + 1;
+}
+
+// 6. Возвращаем виджет
+return {
+    title: "Рейтинг посещаемости",
+    title_counter: body.length,
+    head: [
+        { text: "Участник" },
+        { text: "Факультет" },
+        { text: "Зал", align: "right" },
+        { text: "Бассейн", align: "right" },
+        { text: "Итого", align: "right" }
+    ],
+    body: body,
+    more: "Открыть",
+    more_url: "vk.com/app54462205"
+};
