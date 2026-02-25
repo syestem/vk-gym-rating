@@ -67,23 +67,22 @@
       const tbody = document.querySelector('#rating tbody');
       if (!tbody) return;
 
-      // пропускаем заголовок
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
 
-        // CSV у тебя с запятыми
         const cols = line.split(',');
 
-        // нам нужны ТОЛЬКО первые 5 колонок
         const vkUrl = cols[0]?.trim();
-        const name  = cols[1]?.trim();
-        const gym   = cols[2]?.trim();
-        const pool  = cols[3]?.trim();
-        const total = cols[4]?.trim();
+        if (!vkUrl || !vkUrl.startsWith('https://vk.com')) {
+          // это служебная строка — просто пропускаем
+          continue;
+        }
 
-        // если нет ссылки или имени — это служебная строка
-        if (!vkUrl || !vkUrl.startsWith('https://vk.com')) continue;
+        const name  = cols[1]?.trim() || '';
+        const gym   = cols[2]?.trim() || '';
+        const pool  = cols[3]?.trim() || '';
+        const total = cols[4]?.trim() || '';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
