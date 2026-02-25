@@ -142,6 +142,7 @@ function abortFetch() {
   abortController = new AbortController();
   loader.textContent = 'Загрузка…';
   tbody.innerHTML = '';
+  document.body.classList.add('loading');
 }
 
 function fetchCSV(gid) {
@@ -264,9 +265,10 @@ function render() {
   const data = allData
     .filter(r => selectedFaculty === 'all' || r.faculty === selectedFaculty)
     .sort((a, b) => b.total - a.total);
-if (data.length === 0) {
-  tbody.innerHTML = '<tr><td colspan="6">Нет данных за этот период</td></tr>';
-  return;
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">Нет данных за этот период</td></tr>';
+        document.body.classList.remove('loading');
+        return;
 }
   tbody.innerHTML = '';
   data.forEach((r, i) => {
