@@ -1,5 +1,5 @@
 vkBridge.send('VKWebAppInit');
-
+const APP_ID = 54462205; // ← реальный ID приложения
 /* ---------- VK THEME ---------- */
 vkBridge.subscribe(e => {
   if (e.detail.type === 'VKWebAppUpdateConfig') {
@@ -101,7 +101,8 @@ function loadMonth() {
 
 /* ---------- LOAD ALL TIME ---------- */
 async function loadAllTime() {
-  abort();
+  if (abortController) abortController.abort();
+  abortController = null; // ⬅️ важно
   activeViewEl.textContent = 'За всё время';
 
   const map = new Map();
@@ -149,8 +150,7 @@ function abort() {
 
 function fetchCSV(gid) {
   return fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`,
-    { signal: abortController.signal }
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`
   ).then(r => r.text());
 }
 
@@ -220,4 +220,93 @@ function render() {
     `;
     tbody.appendChild(tr);
   });
+}
+facultySelect.onchange = () => {
+  selectedFaculty = facultySelect.value;
+  render();
+};
+// === WIDGET UPDATE (ADMIN ONLY) ===
+let isAdmin = false;
+
+vkBridge.send('VKWebAppGetLaunchParams')
+  .then(params => {
+    // viewer_group_role приходит ТОЛЬКО если приложение открыто из сообщества
+    if (params.viewer_group_role === 'admin' || params.viewer_group_role === 'editor') {
+      isAdmin = true;
+      document.getElementById('updateWidgetBtn').style.display = 'block';
+    }
+  })
+  .catch(() => {});
+document
+  .getElementById('updateWidgetBtn')
+  .addEventListener('click', async () => {
+    if (!isAdmin) return;
+
+    if (!confirm('Обновить виджет?')) return;
+
+    try {
+      // 1. получаем user token
+      const auth = await vkBridge.send('VKWebAppGetAuthToken', {
+        app_id: APP_ID, // ← ID твоего приложения
+        scope: 'app_widget,groups'
+      });
+
+      const token = auth.access_token;
+
+      // 2. формируем данные для виджета
+      const payload = await buildWidgetPayload();
+
+      // 3. обновляем виджет
+      await updateWidget(token, payload);
+
+      alert('Виджет обновлён');
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка обновления виджета');
+    }
+  });
+
+async function buildWidgetPayload() {
+  // сбор данных
+  // берём текущий отображаемый набор данных
+  const data = allData
+    .slice()
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  return {
+    title: 'Рейтинг посещаемости',
+    rows: data.map((r, i) => [
+      String(i + 1),
+      r.name,
+      String(r.total)
+    ]),
+    button: {
+      text: 'Открыть полностью',
+      url: 'https://vk.com/appXXXX' // ссылка на мини-приложение
+    }
+  };
+}
+
+async function updateWidget(token, payload) {
+  // вызов VK API
+  const params = new URLSearchParams({
+    type: 'table',
+    code: JSON.stringify(payload),
+    access_token: token,
+    v: '5.199'
+  });
+
+  const res = await fetch(
+    'https://api.vk.com/method/appWidgets.update',
+    {
+      method: 'POST',
+      body: params
+    }
+  );
+
+  const json = await res.json();
+  if (json.error) {
+    throw json.error;
+  }
 }
