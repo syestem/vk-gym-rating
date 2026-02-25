@@ -38,11 +38,6 @@
       padding: 16px;
     }
 
-    h2 {
-      margin: 0 0 6px;
-      font-size: 20px;
-    }
-
     .controls {
       display: flex;
       gap: 8px;
@@ -70,13 +65,7 @@
       text-align: center;
     }
 
-    th {
-      background: rgba(0,0,0,0.04);
-    }
-
-    td.name {
-      text-align: left;
-    }
+    td.name { text-align: left; }
 
     tr.top-1 { background: rgba(255,215,0,.15); }
     tr.top-2 { background: rgba(192,192,192,.15); }
@@ -117,85 +106,84 @@
 <script>
   vkBridge.send('VKWebAppInit');
 
-  // 🔹 ТЁМНАЯ ТЕМА VK
   vkBridge.subscribe(e => {
     if (e.detail.type === 'VKWebAppUpdateConfig') {
-      const scheme = e.detail.data.scheme;
-      document.body.classList.toggle('dark', scheme.includes('dark'));
+      document.body.classList.toggle(
+        'dark',
+        e.detail.data.scheme.includes('dark')
+      );
     }
   });
 
   const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
-  const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
-  let allData = [];
-  let months = new Set();
-  let faculties = new Set();
+  const MONTHS = {
+    'Февраль 2026': 2092021629,
+    'Январь 2026': 1935263010
+  };
 
-  fetch(SHEET_URL)
-    .then(r => r.text())
-    .then(text => {
-      text = text.replace(/^\uFEFF/, '');
-      const lines = text.split(/\r?\n/);
+  const monthSelect = document.getElementById('monthSelect');
+  const facultySelect = document.getElementById('facultySelect');
+  const tbody = document.getElementById('tbody');
 
-      lines.forEach(line => {
-        const c = line.split(',');
+  Object.keys(MONTHS).forEach(m => {
+    const o = document.createElement('option');
+    o.value = m;
+    o.textContent = m;
+    monthSelect.appendChild(o);
+  });
 
-        // месяц вида "Февраль 2026"
-        c.forEach(v => {
-          if (/^[А-ЯЁ][а-яё]+ \d{4}$/.test(v.trim())) {
-            months.add(v.trim());
-          }
+  monthSelect.addEventListener('change', loadMonth);
+  facultySelect.addEventListener('change', render);
+
+  let currentData = [];
+
+  function loadMonth() {
+    const month = monthSelect.value;
+    const gid = MONTHS[month];
+
+    fetch(`https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`)
+      .then(r => r.text())
+      .then(text => {
+        text = text.replace(/^\uFEFF/, '');
+        currentData = [];
+        const faculties = new Set();
+
+        text.split(/\r?\n/).slice(1).forEach(line => {
+          if (!line.trim()) return;
+          const c = line.split(',');
+
+          if (!c[0]?.startsWith('https://vk.com')) return;
+
+          currentData.push({
+            vkUrl: c[0],
+            name: c[1],
+            faculty: c[2],
+            gym: Number(c[3]),
+            pool: Number(c[4]),
+            total: Number(c[5])
+          });
+
+          faculties.add(c[2]);
         });
 
-        const vkUrl = c[0]?.trim();
-        if (!vkUrl?.startsWith('https://vk.com')) return;
+        facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+        faculties.forEach(f => {
+          const o = document.createElement('option');
+          o.value = f;
+          o.textContent = f;
+          facultySelect.appendChild(o);
+        });
 
-        const row = {
-          vkUrl,
-          name: c[1]?.trim(),
-          faculty: c[2]?.trim(),
-          gym: Number(c[3]),
-          pool: Number(c[4]),
-          total: Number(c[5])
-        };
-
-        allData.push(row);
-        faculties.add(row.faculty);
+        render();
       });
-
-      initControls();
-      render();
-    });
-
-  function initControls() {
-    const monthSelect = document.getElementById('monthSelect');
-    months.forEach(m => {
-      const o = document.createElement('option');
-      o.value = m;
-      o.textContent = m;
-      monthSelect.appendChild(o);
-    });
-
-    const facultySelect = document.getElementById('facultySelect');
-    faculties.forEach(f => {
-      const o = document.createElement('option');
-      o.value = f;
-      o.textContent = f;
-      facultySelect.appendChild(o);
-    });
-
-    monthSelect.addEventListener('change', render);
-    facultySelect.addEventListener('change', render);
   }
 
   function render() {
-    const tbody = document.getElementById('tbody');
     tbody.innerHTML = '';
+    const faculty = facultySelect.value;
 
-    const faculty = document.getElementById('facultySelect').value;
-
-    let data = [...allData];
+    let data = [...currentData];
     if (faculty !== 'all') {
       data = data.filter(r => r.faculty === faculty);
     }
@@ -219,6 +207,9 @@
       tbody.appendChild(tr);
     });
   }
+
+  // старт — первый месяц
+  loadMonth();
 </script>
 
 </body>
