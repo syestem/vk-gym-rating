@@ -1,4 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Рейтинг посещаемости</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ОБЯЗАТЕЛЬНО: VK Bridge -->
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f6f8;
+      margin: 16px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+    }
+    th, td {
+      padding: 8px;
+      border-bottom: 1px solid #e1e3e6;
+      text-align: center;
+    }
+    th {
+      background: #f0f2f5;
+    }
+    a {
+      color: #2a5885;
+      text-decoration: none;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Рейтинг посещаемости</h2>
+
+<table id="rating">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Участник</th>
+      <th>Зал</th>
+      <th>Бассейн</th>
+      <th>Итого</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
 <script>
+  // Инициализация VK Mini App
   vkBridge.send('VKWebAppInit');
 
   const SHEET_URL =
@@ -7,6 +61,8 @@
   fetch(SHEET_URL)
     .then(r => r.text())
     .then(text => {
+      console.log('CSV:', text);
+
       const rows = text.trim().split('\n').slice(1);
       const tbody = document.querySelector('#rating tbody');
 
@@ -29,5 +85,8 @@
         tbody.appendChild(tr);
       });
     })
-    .catch(err => console.error('CSV error:', err));
+    .catch(err => console.error('Ошибка:', err));
 </script>
+
+</body>
+</html>
