@@ -1,8 +1,10 @@
-if (window.vkBridge && vkBridge.send) {
-  vkBridge.send('VKWebAppInit').catch(() => {
-    // не в VK — это нормально
-  });
+/* ===============================
+   ENV & VK INIT (SAFE)
+================================ */
+const isVK = typeof window.vkBridge !== 'undefined';
 
+if (isVK) {
+  vkBridge.send('VKWebAppInit').catch(() => {});
   vkBridge.subscribe(e => {
     if (e.detail.type === 'VKWebAppUpdateConfig') {
       document.body.classList.toggle(
@@ -12,18 +14,10 @@ if (window.vkBridge && vkBridge.send) {
     }
   });
 }
-const APP_ID = 54462205; // ← реальный ID приложения
-/* ---------- VK THEME ---------- */
-vkBridge.subscribe(e => {
-  if (e.detail.type === 'VKWebAppUpdateConfig') {
-    document.body.classList.toggle(
-      'dark',
-      e.detail.data.scheme.includes('dark')
-    );
-  }
-});
 
-/* ---------- CONSTANTS ---------- */
+/* ===============================
+   CONSTANTS & DOM
+================================ */
 const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
 
 const tbody = document.getElementById('tbody');
@@ -37,15 +31,19 @@ const allTimeBtn = document.getElementById('allTime');
 const currentPeriodEl = document.getElementById('currentPeriod');
 const activeViewEl = document.getElementById('activeView');
 
-/* ---------- STATE ---------- */
+/* ===============================
+   STATE
+================================ */
 let months = [];
 let monthIndex = 0;
 let allData = [];
-let abortController = null;
-let mode = 'month'; // 'month' | 'all'
 let selectedFaculty = 'all';
+let abortController = null;
+let mode = 'month'; // month | all
 
-/* ---------- CURRENT CALENDAR PERIOD ---------- */
+/* ===============================
+   CURRENT CALENDAR MONTH
+================================ */
 (function setCurrentPeriod() {
   const now = new Date();
   const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
@@ -54,7 +52,9 @@ let selectedFaculty = 'all';
     ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
 })();
 
-/* ---------- LOAD MONTHS ---------- */
+/* ===============================
+   LOAD MONTHS LIST
+================================ */
 fetch('./months.json')
   .then(r => r.json())
   .then(json => {
@@ -67,7 +67,6 @@ fetch('./months.json')
       monthSelect.appendChild(o);
     });
 
-    // выбираем стартовый месяц
     const saved = Number(localStorage.getItem('monthIndex'));
     if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
       monthIndex = saved;
@@ -79,7 +78,9 @@ fetch('./months.json')
     loadMonth();
   });
 
-/* ---------- NAVIGATION ---------- */
+/* ===============================
+   NAVIGATION
+================================ */
 prevBtn.onclick = () => mode === 'month' && changeMonth(-1);
 nextBtn.onclick = () => mode === 'month' && changeMonth(1);
 
@@ -102,20 +103,39 @@ function changeMonth(delta) {
   loadMonth();
 }
 
-/* ---------- LOAD ONE MONTH ---------- */
+/* ===============================
+   FETCH HELPERS
+================================ */
+function abortFetch() {
+  if (abortController) abortController.abort();
+  abortController = new AbortController();
+  loader.textContent = 'Загрузка…';
+  tbody.innerHTML = '';
+}
+
+function fetchCSV(gid) {
+  return fetch(
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`,
+    { signal: abortController.signal }
+  ).then(r => r.text());
+}
+
+/* ===============================
+   LOAD ONE MONTH
+================================ */
 function loadMonth() {
-  abort();
+  abortFetch();
   activeViewEl.textContent = months[monthIndex][0];
   localStorage.setItem('monthIndex', monthIndex);
 
-  const gid = months[monthIndex][1];
-  fetchCSV(gid).then(parseSingleMonth);
+  fetchCSV(months[monthIndex][1]).then(parseSingleMonth);
 }
 
-/* ---------- LOAD ALL TIME ---------- */
+/* ===============================
+   LOAD ALL TIME (AGGREGATION)
+================================ */
 async function loadAllTime() {
-  if (abortController) abortController.abort();
-  abortController = null; // ⬅️ важно
+  abortFetch();
   activeViewEl.textContent = 'За всё время';
 
   const map = new Map();
@@ -128,9 +148,8 @@ async function loadAllTime() {
       const c = lines[i].split(',');
       if (!c[0]?.startsWith('https://vk.com')) continue;
 
-      const key = c[0];
-      if (!map.has(key)) {
-        map.set(key, {
+      if (!map.has(c[0])) {
+        map.set(c[0], {
           vkUrl: c[0],
           name: c[1],
           faculty: c[2],
@@ -140,7 +159,7 @@ async function loadAllTime() {
         });
       }
 
-      const row = map.get(key);
+      const row = map.get(c[0]);
       row.gym += +c[3];
       row.pool += +c[4];
       row.total += +c[5];
@@ -153,21 +172,9 @@ async function loadAllTime() {
   render();
 }
 
-/* ---------- FETCH ---------- */
-function abort() {
-  if (abortController) abortController.abort();
-  abortController = new AbortController();
-  loader.innerHTML = 'Загрузка…';
-  tbody.innerHTML = '';
-}
-
-function fetchCSV(gid) {
-  return fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`
-  ).then(r => r.text());
-}
-
-/* ---------- PARSE MONTH ---------- */
+/* ===============================
+   PARSE MONTH CSV
+================================ */
 function parseSingleMonth(text) {
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
   allData = [];
@@ -190,11 +197,12 @@ function parseSingleMonth(text) {
   render();
 }
 
-/* ---------- FACULTIES ---------- */
+/* ===============================
+   FACULTIES
+================================ */
 function rebuildFaculties() {
   const available = new Set(allData.map(r => r.faculty));
 
-  // пересобираем список
   facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
   available.forEach(f => {
     const o = document.createElement('option');
@@ -203,18 +211,22 @@ function rebuildFaculties() {
     facultySelect.appendChild(o);
   });
 
-  // восстанавливаем выбранный факультет
-  if (selectedFaculty !== 'all' && available.has(selectedFaculty)) {
-    facultySelect.value = selectedFaculty;
-  } else {
+  if (!available.has(selectedFaculty)) {
     selectedFaculty = 'all';
-    facultySelect.value = 'all';
   }
+  facultySelect.value = selectedFaculty;
 }
 
-/* ---------- RENDER ---------- */
+facultySelect.onchange = () => {
+  selectedFaculty = facultySelect.value;
+  render();
+};
+
+/* ===============================
+   RENDER
+================================ */
 function render() {
-  loader.innerHTML = '';
+  loader.textContent = '';
 
   const data = allData
     .filter(r => selectedFaculty === 'all' || r.faculty === selectedFaculty)
@@ -233,105 +245,4 @@ function render() {
     `;
     tbody.appendChild(tr);
   });
-}
-facultySelect.onchange = () => {
-  selectedFaculty = facultySelect.value;
-  render();
-};
-// === WIDGET UPDATE (ADMIN ONLY) ===
-let isAdmin = false;
-
-vkBridge.send('VKWebAppGetLaunchParams')
-  .then(params => {
-    // viewer_group_role приходит ТОЛЬКО если приложение открыто из сообщества
-    if (params.vk_viewer_group_role === 'admin' || params.vk_viewer_group_role === 'editor') {
-      isAdmin = true;
-      document.getElementById('updateWidgetBtn').style.display = 'block';
-    }
-  })
-  .catch(() => {});
-document
-  .getElementById('updateWidgetBtn')
-  .addEventListener('click', async () => {
-    if (!isAdmin) return;
-
-    if (!confirm('Обновить виджет?')) return;
-
-    try {
-      // 1. получаем user token
-      const auth = await vkBridge.send('VKWebAppGetAuthToken', {
-        app_id: APP_ID, // ← ID твоего приложения
-        scope: 'groups'
-      });
-
-      const token = auth.access_token;
-
-      // 2. формируем данные для виджета
-      const payload = await buildWidgetPayload();
-
-      // 3. обновляем виджет
-      await updateWidget(token, payload);
-
-      alert('Виджет обновлён');
-    } catch (e) {
-      console.error(e);
-      alert('Ошибка обновления виджета');
-    }
-  });
-
-async function buildWidgetPayload() {
-  // сбор данных
-  // берём текущий отображаемый набор данных
-  const data = allData
-    .slice()
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
-
-  return {
-    title: 'Рейтинг посещаемости',
-    rows: data.map((r, i) => [
-      String(i + 1),
-      r.name,
-      String(r.total)
-    ]),
-    button: {
-      text: 'Открыть полностью',
-      url: 'https://vk.com/appXXXX' // ссылка на мини-приложение
-    }
-  };
-}
-
-async function updateWidget(token, payload) {
-  const url =
-    'https://api.vk.com/method/appWidgets.update' +
-    '?type=table' +
-    '&code=' + encodeURIComponent(JSON.stringify(payload)) +
-    '&access_token=' + token +
-    '&v=5.199';
-
-  const res = await fetch(url);
-  const json = await res.json();
-
-  console.log('VK response:', json);
-
-  if (json.error) {
-    throw json.error;
-  }
-
-  return json.response;
-}
-
-  const json = await res.json();
-
-  console.log('VK appWidgets.update response:', json);
-
-  if (json.error) {
-    alert(
-      'VK error:\n' +
-      JSON.stringify(json.error, null, 2)
-    );
-    throw json.error;
-  }
-
-  return json.response;
 }
