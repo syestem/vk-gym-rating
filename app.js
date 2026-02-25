@@ -19,6 +19,7 @@ if (isVK) {
    CONSTANTS & DOM
 ================================ */
 const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
+const MONTHS_SHEET_GID = 1410034609;
 
 const tbody = document.getElementById('tbody');
 const loader = document.getElementById('loader');
@@ -54,36 +55,56 @@ let abortController = null;
 /* ===============================
    LOAD MONTHS LIST
 ================================ */
-fetch('./months.json')
-  .then(r => r.json())
-  .then(json => {
-    months = Object.entries(json);
+loadMonthsFromSheet();
 
-    months.forEach(([name], i) => {
-      const o = document.createElement('option');
-      o.value = i;
-      o.textContent = name;
-      monthSelect.appendChild(o);
-    });
+function loadMonthsFromSheet() {
+  abortController = new AbortController();
 
-    const now = new Date();
-const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
-const ruYear = now.getFullYear();
-const currentName =
-  ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
-
-// ищем индекс сегодняшнего месяца
-const todayIndex = months.findIndex(([name]) => name === currentName);
-
-if (todayIndex !== -1) {
-  monthIndex = todayIndex;
-} else {
-  monthIndex = months.length - 1; // fallback, если месяца нет в списке
+  fetch(
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MONTHS_SHEET_GID}`,
+    { signal: abortController.signal }
+  )
+    .then(r => r.text())
+    .then(parseMonthsSheet);
 }
+function parseMonthsSheet(text) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
 
-    monthSelect.value = monthIndex;
-    loadMonth();
+  months = [];
+
+  for (let i = 18; i < lines.length; i++) { // 19-я строка = index 18
+    const c = lines[i].split(',');
+
+    const name = c[7]?.trim(); // H
+    const gid = c[8]?.trim();  // I
+
+    if (!name || !gid) continue;
+
+    months.push([name, Number(gid)]);
+  }
+
+  // наполняем select
+  monthSelect.innerHTML = '';
+  months.forEach(([name], i) => {
+    const o = document.createElement('option');
+    o.value = i;
+    o.textContent = name;
+    monthSelect.appendChild(o);
   });
+
+  // выбираем текущий месяц
+  const now = new Date();
+  const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
+  const ruYear = now.getFullYear();
+  const currentName =
+    ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
+
+  const todayIndex = months.findIndex(([name]) => name === currentName);
+  monthIndex = todayIndex !== -1 ? todayIndex : months.length - 1;
+
+  monthSelect.value = monthIndex;
+  loadMonth();
+}
 
 /* ===============================
    NAVIGATION
