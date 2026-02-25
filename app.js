@@ -1,5 +1,6 @@
 vkBridge.send('VKWebAppInit');
 
+/* ---------- VK THEME ---------- */
 vkBridge.subscribe(e => {
   if (e.detail.type === 'VKWebAppUpdateConfig') {
     document.body.classList.toggle(
@@ -9,6 +10,7 @@ vkBridge.subscribe(e => {
   }
 });
 
+/* ---------- CONSTANTS ---------- */
 const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
 
 const tbody = document.getElementById('tbody');
@@ -17,19 +19,23 @@ const monthSelect = document.getElementById('monthSelect');
 const facultySelect = document.getElementById('facultySelect');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
+const activeMonthEl = document.getElementById('activeMonth');
 
+/* ---------- STATE ---------- */
 let months = [];
 let monthIndex = 0;
 let allData = [];
 let visibleCount = 30;
 let abortController = null;
+let userChangedMonth = false;
 
-// ---------- МЕСЯЦЫ ----------
+/* ---------- LOAD MONTHS ---------- */
 fetch('./months.json')
   .then(r => r.json())
   .then(json => {
     months = Object.entries(json);
 
+    // наполняем select
     months.forEach(([name], i) => {
       const o = document.createElement('option');
       o.value = i;
@@ -37,46 +43,61 @@ fetch('./months.json')
       monthSelect.appendChild(o);
     });
 
-    // 1. пытаемся восстановить сохранённый месяц
-const savedRaw = localStorage.getItem('monthIndex');
-let restored = false;
+    /* === ВЫБОР АКТИВНОГО МЕСЯЦА === */
 
-if (savedRaw !== null) {
-  const saved = Number(savedRaw);
-  if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
-    monthIndex = saved;
-    restored = true;
-  }
-}
+    // 1. текущий календарный месяц
+    const now = new Date();
+    const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
+    const ruYear = now.getFullYear();
+    const currentMonthName =
+      ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
 
-// 2. если сохранённого нет — определяем текущий месяц
-if (!restored) {
-  const now = new Date();
-  const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
-  const ruYear = now.getFullYear();
-  const autoName =
-    ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
+    let foundIndex = months.findIndex(m => m[0] === currentMonthName);
 
-  const found = months.findIndex(m => m[0] === autoName);
-  monthIndex = found >= 0 ? found : months.length - 1;
-}
+    // 2. сохранённый выбор пользователя
+    const savedRaw = localStorage.getItem('monthIndex');
+    if (savedRaw !== null) {
+      const saved = Number(savedRaw);
+      if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
+        monthIndex = saved;
+      } else {
+        monthIndex = foundIndex >= 0 ? foundIndex : months.length - 1;
+      }
+    } else {
+      // 3. если сохранённого нет — текущий или последний
+      monthIndex = foundIndex >= 0 ? foundIndex : months.length - 1;
+    }
 
-// 3. запускаем загрузку
-monthSelect.value = monthIndex;
-loadMonth();
+    monthSelect.value = monthIndex;
+    loadMonth();
   });
 
-// ---------- НАВИГАЦИЯ ----------
-prevBtn.onclick = () => changeMonth(-1);
-nextBtn.onclick = () => changeMonth(1);
+/* ---------- NAVIGATION ---------- */
+prevBtn.onclick = () => {
+  userChangedMonth = true;
+  changeMonth(-1);
+};
+
+nextBtn.onclick = () => {
+  userChangedMonth = true;
+  changeMonth(1);
+};
+
 monthSelect.onchange = () => {
+  userChangedMonth = true;
   monthIndex = Number(monthSelect.value);
   loadMonth();
 };
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') changeMonth(-1);
-  if (e.key === 'ArrowRight') changeMonth(1);
+  if (e.key === 'ArrowLeft') {
+    userChangedMonth = true;
+    changeMonth(-1);
+  }
+  if (e.key === 'ArrowRight') {
+    userChangedMonth = true;
+    changeMonth(1);
+  }
 });
 
 function changeMonth(delta) {
@@ -87,7 +108,7 @@ function changeMonth(delta) {
   loadMonth();
 }
 
-// ---------- ЗАГРУЗКА ----------
+/* ---------- LOAD DATA ---------- */
 function loadMonth() {
   if (abortController) abortController.abort();
   abortController = new AbortController();
@@ -95,13 +116,22 @@ function loadMonth() {
   document.body.classList.add('loading');
   loader.innerHTML = '<div class="spinner"></div>';
 
-  prevBtn.disabled = nextBtn.disabled = monthSelect.disabled = facultySelect.disabled = true;
+  prevBtn.disabled =
+    nextBtn.disabled =
+    monthSelect.disabled =
+    facultySelect.disabled = true;
+
   localStorage.setItem('monthIndex', monthIndex);
 
   allData = [];
   visibleCount = 30;
   tbody.innerHTML = '';
   facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+
+  // индикатор активного месяца
+  if (activeMonthEl) {
+    activeMonthEl.textContent = months[monthIndex][0];
+  }
 
   const gid = months[monthIndex][1];
 
@@ -110,15 +140,21 @@ function loadMonth() {
     { signal: abortController.signal }
   )
     .then(r => r.text())
-    .then(text => parseCSV(text))
+    .then(text => {
+      if (abortController.signal.aborted) return;
+      parseCSV(text);
+    })
     .finally(() => {
       document.body.classList.remove('loading');
       loader.innerHTML = '';
-      prevBtn.disabled = nextBtn.disabled = monthSelect.disabled = facultySelect.disabled = false;
+      prevBtn.disabled =
+        nextBtn.disabled =
+        monthSelect.disabled =
+        facultySelect.disabled = false;
     });
 }
 
-// ---------- CSV ----------
+/* ---------- CSV PARSER ---------- */
 function parseCSV(text) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
@@ -150,7 +186,7 @@ function parseCSV(text) {
   render(true);
 }
 
-// ---------- РЕНДЕР ----------
+/* ---------- RENDER ---------- */
 facultySelect.onchange = () => render(true);
 
 function render(reset = false) {
@@ -179,7 +215,7 @@ function render(reset = false) {
   });
 }
 
-// ---------- LAZY LOAD ----------
+/* ---------- LAZY LOAD ---------- */
 window.addEventListener('scroll', () => {
   if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
     visibleCount += 20;
