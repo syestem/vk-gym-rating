@@ -1,4 +1,17 @@
-vkBridge.send('VKWebAppInit');
+if (window.vkBridge && vkBridge.send) {
+  vkBridge.send('VKWebAppInit').catch(() => {
+    // не в VK — это нормально
+  });
+
+  vkBridge.subscribe(e => {
+    if (e.detail.type === 'VKWebAppUpdateConfig') {
+      document.body.classList.toggle(
+        'dark',
+        e.detail.data.scheme.includes('dark')
+      );
+    }
+  });
+}
 const APP_ID = 54462205; // ← реальный ID приложения
 /* ---------- VK THEME ---------- */
 vkBridge.subscribe(e => {
