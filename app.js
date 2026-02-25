@@ -248,7 +248,7 @@ document
       // 1. получаем user token
       const auth = await vkBridge.send('VKWebAppGetAuthToken', {
         app_id: APP_ID, // ← ID твоего приложения
-        scope: 'app_widget,groups'
+        scope: 'groups'
       });
 
       const token = auth.access_token;
