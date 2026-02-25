@@ -1,39 +1,32 @@
-vkBridge.send('VKWebAppInit');
+<script>
+  vkBridge.send('VKWebAppInit');
 
-const SHEET_URL =
-  'https://docs.google.com/spreadsheets/d/1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og/export?format=csv';
+  const SHEET_URL =
+    'https://docs.google.com/spreadsheets/d/1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og/export?format=csv';
 
-fetch(SHEET_URL)
-  .then(r => r.text())
-  .then(async text => {
-    const rows = text.split('\n').slice(1);
-    const tbody = document.querySelector('#rating tbody');
+  fetch(SHEET_URL)
+    .then(r => r.text())
+    .then(text => {
+      const rows = text.split('\n').slice(1);
+      const tbody = document.querySelector('#rating tbody');
 
-    for (let i = 0; i < rows.length; i++) {
-      if (!rows[i].trim()) continue;
+      rows.forEach((row, index) => {
+        if (!row.trim()) return;
 
-      const [vkUrl, gym, pool, total] = rows[i].split(',');
+        const [vkUrl, name, gym, pool, total] = row.split(',');
 
-      const identifier = vkUrl
-        .replace('https://vk.com/', '')
-        .replace('/', '');
-
-      const user = await vkBridge.send('VKWebAppGetUserInfo', {
-        user_ids: identifier
-      }).catch(() => null);
-
-      const name = user
-        ? `${user.first_name} ${user.last_name}`
-        : '—';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${i + 1}</td>
-        <td><a href="${vkUrl}" target="_blank">${name}</a></td>
-        <td>${gym}</td>
-        <td>${pool}</td>
-        <td><b>${total}</b></td>
-      `;
-      tbody.appendChild(tr);
-    }
-  });
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${index + 1}</td>
+          <td><a href="${vkUrl}" target="_blank">${name}</a></td>
+          <td>${gym}</td>
+          <td>${pool}</td>
+          <td><b>${total}</b></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    })
+    .catch(err => {
+      console.error('Ошибка загрузки данных:', err);
+    });
+</script>
