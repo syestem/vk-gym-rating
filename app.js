@@ -105,31 +105,35 @@ function parseMonthsSheet(text) {
   monthSelect.value = monthIndex;
   loadMonth();
 }
-
+function debounce(fn, delay = 120) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+const debouncedLoadMonth = debounce(loadMonth, 150);
+const debouncedLoadAllTime = debounce(loadAllTime, 150);
 /* ===============================
    NAVIGATION
 ================================ */
 prevBtn.onclick = () => changeMonth(-1);
 nextBtn.onclick = () => changeMonth(1);
 
-monthSelect.onchange = () => {
-  mode = 'month';
-  monthIndex = Number(monthSelect.value);
-  loadMonth();
-};
-
-allTimeBtn.onclick = () => {
-  loadAllTime();
-};
-
 function changeMonth(delta) {
   const next = monthIndex + delta;
   if (next < 0 || next >= months.length) return;
   monthIndex = next;
   monthSelect.value = monthIndex;
-  loadMonth();
+  debouncedLoadMonth();
 }
-
+monthSelect.onchange = () => {
+  monthIndex = Number(monthSelect.value);
+  debouncedLoadMonth();
+};
+allTimeBtn.onclick = () => {
+  debouncedLoadAllTime();
+};
 /* ===============================
    FETCH HELPERS
 ================================ */
