@@ -67,12 +67,20 @@ fetch('./months.json')
       monthSelect.appendChild(o);
     });
 
-    const saved = Number(localStorage.getItem('monthIndex'));
-    if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
-      monthIndex = saved;
-    } else {
-      monthIndex = months.length - 1;
-    }
+    const now = new Date();
+const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
+const ruYear = now.getFullYear();
+const currentName =
+  ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
+
+// ищем индекс сегодняшнего месяца
+const todayIndex = months.findIndex(([name]) => name === currentName);
+
+if (todayIndex !== -1) {
+  monthIndex = todayIndex;
+} else {
+  monthIndex = months.length - 1; // fallback, если месяца нет в списке
+}
 
     monthSelect.value = monthIndex;
     loadMonth();
@@ -126,7 +134,6 @@ function fetchCSV(gid) {
 function loadMonth() {
   abortFetch();
   activeViewEl.textContent = months[monthIndex][0];
-  localStorage.setItem('monthIndex', monthIndex);
 
   fetchCSV(months[monthIndex][1]).then(parseSingleMonth);
 }
