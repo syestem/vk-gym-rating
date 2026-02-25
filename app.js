@@ -179,25 +179,25 @@ function parseSingleMonth(text) {
 
 /* ---------- FACULTIES ---------- */
 function rebuildFaculties() {
-  const prev = selectedFaculty;
-  const set = new Set(allData.map(r => r.faculty));
+  const available = new Set(allData.map(r => r.faculty));
 
+  // пересобираем список
   facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
-  set.forEach(f => {
+  available.forEach(f => {
     const o = document.createElement('option');
     o.value = f;
     o.textContent = f;
     facultySelect.appendChild(o);
   });
 
-  selectedFaculty = set.has(prev) ? prev : 'all';
-  facultySelect.value = selectedFaculty;
+  // восстанавливаем выбранный факультет
+  if (selectedFaculty !== 'all' && available.has(selectedFaculty)) {
+    facultySelect.value = selectedFaculty;
+  } else {
+    selectedFaculty = 'all';
+    facultySelect.value = 'all';
+  }
 }
-
-facultySelect.onchange = () => {
-  selectedFaculty = facultySelect.value;
-  render();
-};
 
 /* ---------- RENDER ---------- */
 function render() {
