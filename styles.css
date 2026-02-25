@@ -1,58 +1,192 @@
 :root {
-  --bg:#f5f6f8; --card:#fff; --text:#000; --muted:#6d7885; --border:#e1e3e6;
+  --bg:#f5f6f8;
+  --card:#ffffff;
+  --text:#000000;
+  --muted:#6d7885;
+  --border:#e1e3e6;
+  --accent:#2a5885;
+  --accent-soft:rgba(42,88,133,.12);
 }
+
 body.dark {
-  --bg:#141414; --card:#1f1f1f; --text:#fff; --muted:#aaa; --border:#2c2c2c;
+  --bg:#0f0f10;
+  --card:#1c1d1f;
+  --text:#ffffff;
+  --muted:#9aa0a6;
+  --border:#2b2c2e;
+  --accent:#71a7ff;
+  --accent-soft:rgba(113,167,255,.15);
 }
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-  margin:0; padding:16px;
+  margin:0;
+  padding:16px;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;
-  background:var(--bg); color:var(--text);
-}
-.card { background:var(--card); border-radius:12px; padding:16px; }
-.controls {
-  display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;
-  align-items:center;
-}
-button, select {
-  padding:6px 10px;
-  border-radius:6px;
-  border:1px solid var(--border);
-  background:var(--card);
+  background:var(--bg);
   color:var(--text);
-  cursor:pointer;
+  transition:background .25s ease,color .25s ease;
 }
-button:disabled { opacity:.5; cursor:not-allowed; }
-table { width:100%; border-collapse:collapse; font-size:14px; }
-th,td { padding:8px; border-bottom:1px solid var(--border); text-align:center; }
-td.name { text-align:left; }
-tr.top-1{background:rgba(255,215,0,.15)}
-tr.top-2{background:rgba(192,192,192,.15)}
-tr.top-3{background:rgba(205,127,50,.15)}
-a{color:#2a5885;text-decoration:none}
-body.dark a{color:#71a7ff}
 
-.spinner {
-  width:28px;height:28px;
-  border:3px solid var(--border);
-  border-top-color:#2a5885;
-  border-radius:50%;
-  animation:spin .8s linear infinite;
-  margin:12px auto;
+/* ===== Card ===== */
+.card {
+  max-width: 980px;
+  margin: 0 auto;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.04);
+  transition: background .25s ease;
 }
-@keyframes spin { to { transform:rotate(360deg) } }
 
-.loading table {
-  opacity:.4;
-  pointer-events:none;
+/* ===== Header ===== */
+.header {
+  margin-bottom: 12px;
 }
-/* активный месяц */
+
+h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
 .month-indicator {
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 8px;
 }
 
 .month-indicator b {
   color: var(--text);
+}
+
+/* ===== Controls ===== */
+.controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.month-nav {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+button,
+select {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  transition: background .2s ease, border .2s ease, transform .15s ease;
+}
+
+button:hover,
+select:hover {
+  background: var(--accent-soft);
+}
+
+button:active {
+  transform: scale(.97);
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* иконки ← → */
+.icon-btn {
+  width: 36px;
+  padding: 0;
+  font-size: 18px;
+}
+
+/* primary */
+button.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+button.primary:hover {
+  filter: brightness(1.05);
+}
+
+/* ===== Table ===== */
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr {
+  transition: background .15s ease;
+}
+
+tbody tr:hover {
+  background: var(--accent-soft);
+}
+
+td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+
+td.name {
+  text-align: left;
+  font-weight: 500;
+}
+
+td b {
+  font-weight: 600;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+/* ===== Loader ===== */
+.loader {
+  min-height: 32px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+  padding-top: 8px;
+}
+
+/* ===== Empty state ===== */
+tbody tr td[colspan] {
+  padding: 20px;
+  color: var(--muted);
+}
+
+/* ===== Animation for table reload ===== */
+.loading table {
+  opacity: .45;
+  pointer-events: none;
+  transition: opacity .2s ease;
 }
