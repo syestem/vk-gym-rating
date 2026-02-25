@@ -19,6 +19,7 @@ const monthSelect = document.getElementById('monthSelect');
 const facultySelect = document.getElementById('facultySelect');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
+const allTimeBtn = document.getElementById('allTime');
 const activeMonthEl = document.getElementById('activeMonth');
 
 /* ---------- STATE ---------- */
@@ -27,7 +28,8 @@ let monthIndex = 0;
 let allData = [];
 let visibleCount = 30;
 let abortController = null;
-let userChangedMonth = false;
+let mode = 'month'; // 'month' | 'all'
+let selectedFaculty = 'all';
 
 /* ---------- LOAD MONTHS ---------- */
 fetch('./months.json')
@@ -35,7 +37,6 @@ fetch('./months.json')
   .then(json => {
     months = Object.entries(json);
 
-    // наполняем select
     months.forEach(([name], i) => {
       const o = document.createElement('option');
       o.value = i;
@@ -43,29 +44,20 @@ fetch('./months.json')
       monthSelect.appendChild(o);
     });
 
-    /* === ВЫБОР АКТИВНОГО МЕСЯЦА === */
-
-    // 1. текущий календарный месяц
+    // текущий календарный месяц
     const now = new Date();
     const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
     const ruYear = now.getFullYear();
-    const currentMonthName =
+    const currentName =
       ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
 
-    let foundIndex = months.findIndex(m => m[0] === currentMonthName);
+    const found = months.findIndex(m => m[0] === currentName);
 
-    // 2. сохранённый выбор пользователя
-    const savedRaw = localStorage.getItem('monthIndex');
-    if (savedRaw !== null) {
-      const saved = Number(savedRaw);
-      if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
-        monthIndex = saved;
-      } else {
-        monthIndex = foundIndex >= 0 ? foundIndex : months.length - 1;
-      }
+    const saved = Number(localStorage.getItem('monthIndex'));
+    if (!Number.isNaN(saved) && saved >= 0 && saved < months.length) {
+      monthIndex = saved;
     } else {
-      // 3. если сохранённого нет — текущий или последний
-      monthIndex = foundIndex >= 0 ? foundIndex : months.length - 1;
+      monthIndex = found >= 0 ? found : months.length - 1;
     }
 
     monthSelect.value = monthIndex;
@@ -74,31 +66,25 @@ fetch('./months.json')
 
 /* ---------- NAVIGATION ---------- */
 prevBtn.onclick = () => {
-  userChangedMonth = true;
+  if (mode !== 'month') return;
   changeMonth(-1);
 };
 
 nextBtn.onclick = () => {
-  userChangedMonth = true;
+  if (mode !== 'month') return;
   changeMonth(1);
 };
 
 monthSelect.onchange = () => {
-  userChangedMonth = true;
+  mode = 'month';
   monthIndex = Number(monthSelect.value);
   loadMonth();
 };
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'ArrowLeft') {
-    userChangedMonth = true;
-    changeMonth(-1);
-  }
-  if (e.key === 'ArrowRight') {
-    userChangedMonth = true;
-    changeMonth(1);
-  }
-});
+allTimeBtn.onclick = () => {
+  mode = 'all';
+  loadAllTime();
+};
 
 function changeMonth(delta) {
   const next = monthIndex + delta;
@@ -108,7 +94,7 @@ function changeMonth(delta) {
   loadMonth();
 }
 
-/* ---------- LOAD DATA ---------- */
+/* ---------- LOAD ONE MONTH ---------- */
 function loadMonth() {
   if (abortController) abortController.abort();
   abortController = new AbortController();
@@ -116,22 +102,15 @@ function loadMonth() {
   document.body.classList.add('loading');
   loader.innerHTML = '<div class="spinner"></div>';
 
-  prevBtn.disabled =
-    nextBtn.disabled =
-    monthSelect.disabled =
-    facultySelect.disabled = true;
+  selectedFaculty = facultySelect.value;
 
-  localStorage.setItem('monthIndex', monthIndex);
-
-  allData = [];
-  visibleCount = 30;
   tbody.innerHTML = '';
   facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+  allData = [];
+  visibleCount = 30;
 
-  // индикатор активного месяца
-  if (activeMonthEl) {
-    activeMonthEl.textContent = months[monthIndex][0];
-  }
+  activeMonthEl.textContent = months[monthIndex][0];
+  localStorage.setItem('monthIndex', monthIndex);
 
   const gid = months[monthIndex][1];
 
@@ -140,21 +119,73 @@ function loadMonth() {
     { signal: abortController.signal }
   )
     .then(r => r.text())
-    .then(text => {
-      if (abortController.signal.aborted) return;
-      parseCSV(text);
-    })
+    .then(text => parseCSV(text))
     .finally(() => {
       document.body.classList.remove('loading');
       loader.innerHTML = '';
-      prevBtn.disabled =
-        nextBtn.disabled =
-        monthSelect.disabled =
-        facultySelect.disabled = false;
     });
 }
 
-/* ---------- CSV PARSER ---------- */
+/* ---------- LOAD ALL TIME ---------- */
+async function loadAllTime() {
+  if (abortController) abortController.abort();
+  abortController = new AbortController();
+
+  document.body.classList.add('loading');
+  loader.innerHTML = '<div class="spinner"></div>';
+
+  selectedFaculty = facultySelect.value;
+
+  tbody.innerHTML = '';
+  facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+  allData = [];
+  visibleCount = 30;
+
+  activeMonthEl.textContent = 'За всё время';
+
+  const map = new Map();
+
+  for (const [, gid] of months) {
+    const text = await fetch(
+      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`
+    ).then(r => r.text());
+
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
+
+    for (let i = 1; i < lines.length; i++) {
+      const c = lines[i].split(',');
+      if (!c[0]?.startsWith('https://vk.com')) continue;
+
+      const key = c[0];
+
+      if (!map.has(key)) {
+        map.set(key, {
+          vkUrl: c[0],
+          name: c[1],
+          faculty: c[2],
+          gym: 0,
+          pool: 0,
+          total: 0
+        });
+      }
+
+      const item = map.get(key);
+      item.gym += +c[3];
+      item.pool += +c[4];
+      item.total += +c[5];
+      item.faculty = c[2]; // последний факультет
+    }
+  }
+
+  allData = Array.from(map.values());
+  rebuildFaculties();
+  render(true);
+
+  document.body.classList.remove('loading');
+  loader.innerHTML = '';
+}
+
+/* ---------- CSV ---------- */
 function parseCSV(text) {
   text = text.replace(/^\uFEFF/, '');
   const lines = text.split(/\r?\n/);
@@ -176,6 +207,15 @@ function parseCSV(text) {
     faculties.add(c[2]);
   }
 
+  rebuildFaculties(faculties);
+  render(true);
+}
+
+/* ---------- FACULTIES ---------- */
+function rebuildFaculties(set) {
+  const faculties = set || new Set(allData.map(r => r.faculty));
+  facultySelect.innerHTML = '<option value="all">Все факультеты</option>';
+
   faculties.forEach(f => {
     const o = document.createElement('option');
     o.value = f;
@@ -183,18 +223,25 @@ function parseCSV(text) {
     facultySelect.appendChild(o);
   });
 
-  render(true);
+  if ([...faculties].includes(selectedFaculty)) {
+    facultySelect.value = selectedFaculty;
+  } else {
+    facultySelect.value = 'all';
+    selectedFaculty = 'all';
+  }
 }
 
 /* ---------- RENDER ---------- */
-facultySelect.onchange = () => render(true);
+facultySelect.onchange = () => {
+  selectedFaculty = facultySelect.value;
+  render(true);
+};
 
 function render(reset = false) {
   if (reset) tbody.innerHTML = '';
 
-  const faculty = facultySelect.value;
   const data = allData
-    .filter(r => faculty === 'all' || r.faculty === faculty)
+    .filter(r => selectedFaculty === 'all' || r.faculty === selectedFaculty)
     .sort((a, b) => b.total - a.total);
 
   data.slice(0, visibleCount).forEach((r, i) => {
