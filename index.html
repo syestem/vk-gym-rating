@@ -5,7 +5,6 @@
   <title>Рейтинг посещаемости</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- VK Bridge -->
   <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
   <style>
@@ -15,15 +14,20 @@
       --text: #000000;
       --muted: #6d7885;
       --border: #e1e3e6;
-      --gold: #ffd700;
-      --silver: #c0c0c0;
-      --bronze: #cd7f32;
+    }
+
+    body.dark {
+      --bg: #141414;
+      --card: #1f1f1f;
+      --text: #ffffff;
+      --muted: #aaaaaa;
+      --border: #2c2c2c;
     }
 
     body {
       margin: 0;
       padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
       background: var(--bg);
       color: var(--text);
     }
@@ -35,14 +39,23 @@
     }
 
     h2 {
-      margin: 0 0 4px;
+      margin: 0 0 6px;
       font-size: 20px;
     }
 
-    .subtitle {
-      color: var(--muted);
+    .controls {
+      display: flex;
+      gap: 8px;
       margin-bottom: 12px;
-      font-size: 14px;
+      flex-wrap: wrap;
+    }
+
+    select {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
     }
 
     table {
@@ -52,56 +65,72 @@
     }
 
     th, td {
-      padding: 10px;
+      padding: 8px;
       border-bottom: 1px solid var(--border);
       text-align: center;
     }
 
     th {
-      font-weight: 600;
-      background: #f0f2f5;
+      background: rgba(0,0,0,0.04);
     }
 
     td.name {
       text-align: left;
     }
 
-    tr.top-1 { background: rgba(255, 215, 0, 0.15); }
-    tr.top-2 { background: rgba(192, 192, 192, 0.15); }
-    tr.top-3 { background: rgba(205, 127, 50, 0.15); }
+    tr.top-1 { background: rgba(255,215,0,.15); }
+    tr.top-2 { background: rgba(192,192,192,.15); }
+    tr.top-3 { background: rgba(205,127,50,.15); }
 
-    a {
-      color: #2a5885;
-      text-decoration: none;
-    }
+    a { color: #2a5885; text-decoration: none; }
+    body.dark a { color: #71a7ff; }
   </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h2 id="title">Рейтинг посещаемости</h2>
-  <div class="subtitle" id="month">Загрузка…</div>
+  <h2>Рейтинг посещаемости</h2>
 
-  <table id="rating">
+  <div class="controls">
+    <select id="monthSelect"></select>
+    <select id="facultySelect">
+      <option value="all">Все факультеты</option>
+    </select>
+  </div>
+
+  <table>
     <thead>
       <tr>
         <th>#</th>
         <th>Участник</th>
+        <th>Факультет</th>
         <th>Зал</th>
         <th>Бассейн</th>
         <th>Итого</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody id="tbody"></tbody>
   </table>
 </div>
 
 <script>
   vkBridge.send('VKWebAppInit');
 
-  const SHEET_URL =
-    'https://docs.google.com/spreadsheets/d/1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og/export?format=csv';
+  // 🔹 ТЁМНАЯ ТЕМА VK
+  vkBridge.subscribe(e => {
+    if (e.detail.type === 'VKWebAppUpdateConfig') {
+      const scheme = e.detail.data.scheme;
+      document.body.classList.toggle('dark', scheme.includes('dark'));
+    }
+  });
+
+  const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
+  const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+  let allData = [];
+  let months = new Set();
+  let faculties = new Set();
 
   fetch(SHEET_URL)
     .then(r => r.text())
@@ -109,63 +138,87 @@
       text = text.replace(/^\uFEFF/, '');
       const lines = text.split(/\r?\n/);
 
-      const tbody = document.querySelector('#rating tbody');
-      const monthEl = document.getElementById('month');
+      lines.forEach(line => {
+        const c = line.split(',');
 
-      const data = [];
-      let detectedMonth = '';
-
-      for (let i = 0; i < lines.length; i++) {
-        const cols = lines[i].split(',');
-
-        // Поиск месяца вида "Февраль 2026"
-        cols.forEach(c => {
-          if (/^[А-ЯЁ][а-яё]+ \d{4}$/.test(c.trim())) {
-            detectedMonth = c.trim();
+        // месяц вида "Февраль 2026"
+        c.forEach(v => {
+          if (/^[А-ЯЁ][а-яё]+ \d{4}$/.test(v.trim())) {
+            months.add(v.trim());
           }
         });
 
-        const vkUrl = cols[0]?.trim();
-        if (!vkUrl || !vkUrl.startsWith('https://vk.com')) continue;
+        const vkUrl = c[0]?.trim();
+        if (!vkUrl?.startsWith('https://vk.com')) return;
 
-        data.push({
+        const row = {
           vkUrl,
-          name: cols[1]?.trim(),
-          gym: Number(cols[2]),
-          pool: Number(cols[3]),
-          total: Number(cols[4])
-        });
-      }
+          name: c[1]?.trim(),
+          faculty: c[2]?.trim(),
+          gym: Number(c[3]),
+          pool: Number(c[4]),
+          total: Number(c[5])
+        };
 
-      // Сортировка по Итого (убывание)
-      data.sort((a, b) => b.total - a.total);
-
-      // Заголовок месяца
-      monthEl.textContent = detectedMonth
-        ? `Период: ${detectedMonth}`
-        : 'Период не указан';
-
-      // Отрисовка
-      data.forEach((row, index) => {
-        const tr = document.createElement('tr');
-
-        if (index === 0) tr.classList.add('top-1');
-        if (index === 1) tr.classList.add('top-2');
-        if (index === 2) tr.classList.add('top-3');
-
-        tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td class="name">
-            <a href="${row.vkUrl}" target="_blank">${row.name}</a>
-          </td>
-          <td>${row.gym}</td>
-          <td>${row.pool}</td>
-          <td><b>${row.total}</b></td>
-        `;
-        tbody.appendChild(tr);
+        allData.push(row);
+        faculties.add(row.faculty);
       });
-    })
-    .catch(err => console.error(err));
+
+      initControls();
+      render();
+    });
+
+  function initControls() {
+    const monthSelect = document.getElementById('monthSelect');
+    months.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m;
+      o.textContent = m;
+      monthSelect.appendChild(o);
+    });
+
+    const facultySelect = document.getElementById('facultySelect');
+    faculties.forEach(f => {
+      const o = document.createElement('option');
+      o.value = f;
+      o.textContent = f;
+      facultySelect.appendChild(o);
+    });
+
+    monthSelect.addEventListener('change', render);
+    facultySelect.addEventListener('change', render);
+  }
+
+  function render() {
+    const tbody = document.getElementById('tbody');
+    tbody.innerHTML = '';
+
+    const faculty = document.getElementById('facultySelect').value;
+
+    let data = [...allData];
+    if (faculty !== 'all') {
+      data = data.filter(r => r.faculty === faculty);
+    }
+
+    data.sort((a, b) => b.total - a.total);
+
+    data.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      if (i === 0) tr.classList.add('top-1');
+      if (i === 1) tr.classList.add('top-2');
+      if (i === 2) tr.classList.add('top-3');
+
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td class="name"><a href="${r.vkUrl}" target="_blank">${r.name}</a></td>
+        <td>${r.faculty}</td>
+        <td>${r.gym}</td>
+        <td>${r.pool}</td>
+        <td><b>${r.total}</b></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
 </script>
 
 </body>
