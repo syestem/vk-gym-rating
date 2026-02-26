@@ -265,12 +265,15 @@ function render() {
   const data = allData
     .filter(r => selectedFaculty === 'all' || r.faculty === selectedFaculty)
     .sort((a, b) => b.total - a.total);
-      if (data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">Нет данных за этот период</td></tr>';
-        document.body.classList.remove('loading');
-        return;
-}
+
   tbody.innerHTML = '';
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6">Нет данных за этот период</td></tr>';
+    document.body.classList.remove('loading');
+    return;
+  }
+
   data.forEach((r, i) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -283,4 +286,7 @@ function render() {
     `;
     tbody.appendChild(tr);
   });
+
+  // 🔴 ВАЖНО: снимаем loading после успешного рендера
+  document.body.classList.remove('loading');
 }
