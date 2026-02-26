@@ -92,18 +92,10 @@ function parseMonthsSheet(text) {
     monthSelect.appendChild(o);
   });
 
-  // выбираем текущий месяц
-  const now = new Date();
-  const ruMonth = now.toLocaleString('ru-RU', { month: 'long' });
-  const ruYear = now.getFullYear();
-  const currentName =
-    ruMonth.charAt(0).toUpperCase() + ruMonth.slice(1) + ' ' + ruYear;
-
-  const todayIndex = months.findIndex(([name]) => name === currentName);
-  monthIndex = todayIndex !== -1 ? todayIndex : months.length - 1;
-
-  monthSelect.value = monthIndex;
-  loadMonth();
+  // всегда открываем первый лист
+   monthIndex = 0;
+   monthSelect.value = monthIndex;
+   loadMonth();
 }
 function debounce(fn, delay = 120) {
   let t;
