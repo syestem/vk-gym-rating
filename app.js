@@ -283,18 +283,17 @@ function render() {
   document.body.classList.remove('loading');
 }
 
-
 showScheduleBtn.addEventListener('click', openSchedulePage);
 
 function openSchedulePage() {
   // VK Mini App
-  if (typeof vkBridge !== 'undefined') {
-    vkBridge.send('VKWebAppOpenApp', {
-      app_id: 54462205,        // твой app_id
-      location: 'schedule'    // роут
+  if (isVK) {
+    vkBridge.send('VKWebAppOpenPage', {
+      url: window.location.origin + '/schedule.html'
     });
-  } else {
-    // обычный браузер
-    window.open('schedule.html', '_blank');
+    return;
   }
+
+  // Обычный браузер
+  window.open('schedule.html', '_blank');
 }
