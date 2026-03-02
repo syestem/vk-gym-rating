@@ -125,8 +125,8 @@ function parseLaneSchedule(rows) {
 
       let r = i + 1;
       while (r < rows.length && !DAYS.includes(rows[r]?.[0])) {
-        const lane = Number(rows[r]?.[1]);
-        if (lane >= 1 && lane <= 6) {
+        const lane = parseInt(rows[r]?.[1], 10);
+        if (!Number.isNaN(lane) && lane >= 1 && lane <= 6) {
           timeCols.forEach((col, idx) => {
             const cell = rows[r][col];
             result[day][idx].lanes.push({
@@ -161,6 +161,7 @@ function renderDayTabs() {
 }
 
 function renderDay() {
+  console.log('DAY:', activeDay, parsed[activeDay]);
   content.innerHTML = '';
   const today = getCurrentWeekDay();
 
@@ -199,6 +200,13 @@ function renderDay() {
         nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     }, 0);
+  }
+  if (content.children.length === 0) {
+  content.innerHTML = `
+    <div class="slot" style="text-align:center;color:#6d7885">
+      Нет свободных слотов
+    </div>
+  `;
   }
 }
 
