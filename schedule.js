@@ -73,37 +73,62 @@ async function fetchCSV(gid) {
 
 /* ===== PARSER ===== */
 function parseLaneSchedule(rows) {
-  const result = {};
-  let currentDay = null;
-  let timeSlots = [];
+  const DAYS = [
+    'Понедельник',
+    'Вторник',
+    'Среда',
+    'Четверг',
+    'Пятница',
+    'Суббота',
+    'Воскресенье'
+  ];
 
-  for (let i = 0; i < rows.length; i++) {
+  const result = {};
+
+  // 1. Время (строка "время на воде")
+  const timeRow = rows.find(r =>
+    r[0] && r[0].toLowerCase().includes('время')
+  );
+
+  if (!timeRow) return result;
+
+  // Берём только реальные временные слоты (C..W)
+  const times = timeRow
+    .slice(2)
+    .filter(t => /\d{1,2}:\d{2}/.test(t));
+
+  let i = 0;
+  while (i < rows.length) {
     const row = rows[i];
 
-    if (row[0] && isDay(row[0])) {
-      currentDay = row[0];
-      result[currentDay] = [];
+    // 2. Начало дня
+    if (row[0] && DAYS.includes(row[0])) {
+      const day = row[0];
+      result[day] = times.map(t => ({
+        time: t,
+        lanes: []
+      }));
+
+      // 3. Следующие 6 строк — дорожки
+      for (let l = 1; l <= 6; l++) {
+        const laneRow = rows[i + l];
+        const laneNumber = Number(laneRow[1]);
+        if (!laneNumber) continue;
+
+        times.forEach((_, tIndex) => {
+          const cell = laneRow[tIndex + 2];
+          result[day][tIndex].lanes.push({
+            lane: laneNumber,
+            busy: Boolean(cell && cell.trim())
+          });
+        });
+      }
+
+      i += 7; // перескакиваем блок дня
       continue;
     }
 
-    if (row.some(c => /\d{1,2}:\d{2}[-–]\d{1,2}:\d{2}/.test(c))) {
-      timeSlots = row.slice(2);
-      timeSlots.forEach(t => {
-        result[currentDay].push({ time: t, lanes: [] });
-      });
-      continue;
-    }
-
-    const lane = Number(row[1]);
-    if (!lane || !currentDay) continue;
-
-    for (let t = 0; t < timeSlots.length; t++) {
-      const cell = row[t + 2];
-      result[currentDay][t].lanes.push({
-        lane,
-        busy: Boolean(cell && cell.trim())
-      });
-    }
+    i++;
   }
 
   return result;
