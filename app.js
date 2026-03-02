@@ -164,31 +164,33 @@ async function loadAllTime() {
   const map = new Map();
 
   for (const [, gid] of months) {
-    const text = await fetchCSV(gid);
-    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
+  if (gid === MONTHS_SHEET_GID) continue; // ⬅ исключаем лист "MONTHS"
 
-    for (let i = 1; i < lines.length; i++) {
-      const c = lines[i].split(',');
-      if (!c[0]?.startsWith('https://vk.com')) continue;
+  const text = await fetchCSV(gid);
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
 
-      if (!map.has(c[0])) {
-        map.set(c[0], {
-          vkUrl: c[0],
-          name: c[1],
-          faculty: c[2],
-          gym: 0,
-          pool: 0,
-          total: 0
-        });
-      }
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(',');
+    if (!c[0]?.startsWith('https://vk.com')) continue;
 
-      const row = map.get(c[0]);
-      row.gym += +c[3];
-      row.pool += +c[4];
-      row.total += +c[5];
-      row.faculty = c[2]; // последний факультет
+    if (!map.has(c[0])) {
+      map.set(c[0], {
+        vkUrl: c[0],
+        name: c[1],
+        faculty: c[2],
+        gym: 0,
+        pool: 0,
+        total: 0
+      });
     }
+
+    const row = map.get(c[0]);
+    row.gym += +c[3];
+    row.pool += +c[4];
+    row.total += +c[5];
+    row.faculty = c[2];
   }
+}
 
   allData = Array.from(map.values());
   rebuildFaculties();
