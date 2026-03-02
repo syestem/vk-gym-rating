@@ -57,11 +57,15 @@ button.primary {
 }
 
 .schedule-content {
-  display:flex;
-  flex-direction:column;
+  display:grid;
+  grid-template-columns:repeat(2, 1fr);
   gap:12px;
 }
-
+@media (max-width: 520px) {
+  .schedule-content {
+    grid-template-columns:1fr;
+  }
+}
 .slot {
   background:#f9f9f9;
   border-radius:14px;
