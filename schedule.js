@@ -15,9 +15,8 @@ const poolButtons = document.querySelectorAll('[data-pool]');
 init();
 
 async function init() {
-  titleEl.textContent = getCurrentMonth();
-  backBtn.onclick = () => history.back();
-
+  titleEl.textContent = `Расписание бассейна на ${getCurrentMonth()}`;
+  
   poolButtons.forEach(btn => {
     btn.onclick = () => {
       poolButtons.forEach(b => b.classList.remove('primary'));
@@ -39,7 +38,8 @@ async function init() {
   parsed = parseLaneSchedule(rows);
 
   renderDayTabs();
-  activeDay = Object.keys(parsed)[0];
+  const today = getCurrentWeekDay();
+  activeDay = parsed[today] ? today : Object.keys(parsed)[0];
   renderDay();
 }
 
@@ -160,7 +160,9 @@ function renderDay() {
     ).join('');
 
     const div = document.createElement('div');
-    div.className = 'slot';
+    const isNow = isNowInSlot(slot.time);
+
+    div.className = `slot${isNow ? ' now' : ''}`;
 
     div.innerHTML = `
       <div class="time">
@@ -171,7 +173,14 @@ function renderDay() {
     `;
 
     content.appendChild(div);
+    
   });
+  setTimeout(() => {
+  const nowSlot = document.querySelector('.slot.now');
+  if (nowSlot) {
+    nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}, 0);
 }
 /* ===== HELPERS ===== */
 function isDay(s) {
@@ -190,4 +199,28 @@ function normalize(s) {
 function findMonth() {
   const cur = normalize(getCurrentMonth());
   return scheduleIndex.find(m => normalize(m.month) === cur);
+}
+function getCurrentWeekDay() {
+  const map = [
+    'Воскресенье',
+    'Понедельник',
+    'Вторник',
+    'Среда',
+    'Четверг',
+    'Пятница',
+    'Суббота'
+  ];
+  return map[new Date().getDay()];
+}
+function isNowInSlot(slotTime) {
+  const now = new Date();
+
+  const [start, end] = slotTime.split('-').map(t => {
+    const [h, m] = t.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+  });
+
+  return now >= start && now <= end;
 }
