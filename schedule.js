@@ -130,7 +130,7 @@ function parseLaneSchedule(rows) {
       const day = row[0];
       result[day] = times.map(t => ({ time: t, lanes: [] }));
 
-      let r = i + 1;
+      let r = i;
 while (r < rows.length && !DAYS.includes(rows[r]?.[0])) {
   const lane = parseInt(rows[r]?.[2], 10); // ← ВАЖНО
 
