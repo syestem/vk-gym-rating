@@ -282,18 +282,3 @@ function render() {
   // 🔴 ВАЖНО: снимаем loading после успешного рендера
   document.body.classList.remove('loading');
 }
-
-showScheduleBtn.addEventListener('click', openSchedulePage);
-
-function openSchedulePage() {
-  // VK Mini App
-  if (isVK) {
-    vkBridge.send('VKWebAppOpenPage', {
-      url: window.location.origin + '/schedule.html'
-    });
-    return;
-  }
-
-  // Обычный браузер
-  window.open('schedule.html', '_blank');
-}
