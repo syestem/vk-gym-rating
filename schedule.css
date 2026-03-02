@@ -101,3 +101,11 @@ button.primary {
 .lane.free {
   background:#e1f3e8;
 }
+.badge {
+  background: #2a5885;
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+}
