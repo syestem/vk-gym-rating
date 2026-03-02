@@ -282,12 +282,16 @@ function render() {
   // 🔴 ВАЖНО: снимаем loading после успешного рендера
   document.body.classList.remove('loading');
 }
+
+
+showScheduleBtn.addEventListener('click', openSchedulePage);
+
 function openSchedulePage() {
-  // если это VK Mini App
+  // VK Mini App
   if (typeof vkBridge !== 'undefined') {
     vkBridge.send('VKWebAppOpenApp', {
-      app_id: app54462205,          // если одна и та же мини-аппа
-      location: 'schedule'
+      app_id: 54462205,        // твой app_id
+      location: 'schedule'    // роут
     });
   } else {
     // обычный браузер
