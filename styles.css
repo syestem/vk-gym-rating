@@ -190,3 +190,55 @@ tbody tr td[colspan] {
   pointer-events: none;
   transition: opacity .2s ease;
 }
+.schedule {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.schedule.hidden {
+  display: none;
+}
+
+.schedule > div {
+  background: var(--card);
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.schedule-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.schedule-tabs button {
+  flex: 1;
+}
+
+.schedule-tabs button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.schedule-content {
+  overflow-y: auto;
+  font-size: 14px;
+}
