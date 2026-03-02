@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Расписание</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h2 id="scheduleTitle">Расписание</h2>
+  </div>
+
+  <div class="controls">
+    <button data-type="big" class="primary">Большой бассейн</button>
+    <button data-type="small">Малый бассейн</button>
+  </div>
+
+  <div class="table-wrap" id="scheduleContent">
+    Загрузка…
+  </div>
+</div>
+
+<script src="schedule.js"></script>
+</body>
+</html>
