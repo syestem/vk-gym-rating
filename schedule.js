@@ -22,6 +22,7 @@ const dayTabs = document.getElementById('dayTabs');
 const titleEl = document.getElementById('title');
 const poolButtons = document.querySelectorAll('[data-pool]');
 const onlyFreeBtn = document.getElementById('onlyFreeBtn');
+const showAllBtn = document.getElementById('showAllBtn');
 
 init();
 
@@ -44,7 +45,13 @@ async function init() {
     onlyFreeBtn.classList.toggle('primary', onlyFree);
     renderDay();
   };
-
+  
+  showAllBtn.onclick = () => {
+    onlyFree = false;
+    onlyFreeBtn.classList.remove('primary');
+    renderDay();
+  };
+  
   if (scheduleIndex.length === 0) {
     await loadIndex();
   }
@@ -186,7 +193,8 @@ function renderDay() {
       <div class="time">
         ${slot.time}
         <span class="count">Свободно: ${free}/${total}</span>
-        ${isNow ? '<span class="badge">СЕЙЧАС</span>' : ''}
+        ${isNow ? '<span class="badge now">СЕЙЧАС</span>' : ''}
+        ${free === 0 ? '<span class="badge full">Все дорожки заняты</span>' : ''}
       </div>
       <div class="lanes">${lanesHtml}</div>
     `;
