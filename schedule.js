@@ -1,6 +1,16 @@
 const SHEET_ID_TIMETABLE = '11yaPysnuMfkXtwvZSOOohogKnvT0py7rWuKNyAs5ud8';
 const SCHEDULE_INDEX_GID = 887181046;
 
+const DAYS = [
+  'Понедельник',
+  'Вторник',
+  'Среда',
+  'Четверг',
+  'Пятница',
+  'Суббота',
+  'Воскресенье'
+];
+
 let scheduleIndex = [];
 let parsed = {};
 let activeDay = null;
@@ -9,10 +19,11 @@ let activePool = 'big';
 const content = document.getElementById('scheduleContent');
 const dayTabs = document.getElementById('dayTabs');
 const titleEl = document.getElementById('title');
-const backBtn = document.getElementById('backBtn');
 const poolButtons = document.querySelectorAll('[data-pool]');
 
 init();
+
+/* ================= INIT ================= */
 
 async function init() {
   titleEl.textContent = `Расписание бассейна на ${getCurrentMonth()}`;
@@ -26,31 +37,34 @@ async function init() {
     };
   });
 
-  await loadIndex();
-  const entry = findMonth();
+  if (scheduleIndex.length === 0) {
+    await loadIndex();
+  }
 
+  const entry = findMonth();
   if (!entry || !entry[activePool]) {
-    content.textContent = 'Нет данных по выбранному бассейну';
+    content.textContent = 'Нет расписания на этот месяц';
     return;
   }
 
   const rows = await fetchCSV(entry[activePool]);
   parsed = parseLaneSchedule(rows);
 
-  renderDayTabs();
   const today = getCurrentWeekDay();
   activeDay = parsed[today] ? today : Object.keys(parsed)[0];
+
+  renderDayTabs();
   renderDay();
 }
 
-/* ===== ИНДЕКС ===== */
+/* ================= FETCH ================= */
+
 async function loadIndex() {
   const text = await fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
   ).then(r => r.text());
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
-  scheduleIndex = [];
 
   for (let i = 1; i < lines.length; i++) {
     const c = lines[i].split(',');
@@ -64,10 +78,7 @@ async function loadIndex() {
   }
 }
 
-/* ===== CSV ===== */
 async function fetchCSV(gid) {
-  if (gid === SCHEDULE_INDEX_GID) return [];
-
   const text = await fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${gid}`
   ).then(r => r.text());
@@ -75,18 +86,9 @@ async function fetchCSV(gid) {
   return text.replace(/^\uFEFF/, '').split(/\r?\n/).map(r => r.split(','));
 }
 
-/* ===== ПАРСЕР ===== */
-function parseLaneSchedule(rows) {
-  const DAYS = [
-    'Понедельник',
-    'Вторник',
-    'Среда',
-    'Четверг',
-    'Пятница',
-    'Суббота',
-    'Воскресенье'
-  ];
+/* ================= PARSER ================= */
 
+function parseLaneSchedule(rows) {
   const result = {};
 
   const timeRowIndex = rows.findIndex(r =>
@@ -134,7 +136,8 @@ function parseLaneSchedule(rows) {
   return result;
 }
 
-/* ===== RENDER ===== */
+/* ================= RENDER ================= */
+
 function renderDayTabs() {
   dayTabs.innerHTML = '';
   Object.keys(parsed).forEach(day => {
@@ -154,21 +157,21 @@ function renderDay() {
   content.innerHTML = '';
 
   parsed[activeDay].forEach(slot => {
-    const freeCount = slot.lanes.filter(l => !l.busy).length;
+    const total = slot.lanes.length;
+    const free = slot.lanes.filter(l => !l.busy).length;
+    const isNow = isNowInSlot(slot.time);
 
     const lanesHtml = slot.lanes.map(l =>
       `<span class="lane ${l.busy ? 'busy' : 'free'}">${l.lane}</span>`
     ).join('');
 
     const div = document.createElement('div');
-    const isNow = isNowInSlot(slot.time);
-
     div.className = `slot${isNow ? ' now' : ''}`;
 
     div.innerHTML = `
       <div class="time">
         ${slot.time}
-        <span class="count">Свободно: ${freeCount}/${slot.lanes.length}</span>
+        <span class="count">Свободно: ${free}/${total}</span>
       </div>
       <div class="lanes">${lanesHtml}</div>
     `;
@@ -184,37 +187,16 @@ function renderDay() {
   }, 0);
 }
 
-/* ===== HELPERS ===== */
+/* ================= HELPERS ================= */
+
 function getCurrentMonth() {
   const d = new Date();
-  return (
-    d.toLocaleString('ru-RU', { month: 'long' })
-      .replace(/^./, c => c.toUpperCase()) +
-    ' ' +
-    d.getFullYear()
-  );
-}
-
-function normalize(s) {
-  return s.replace(/\s+/g, ' ').trim().toLowerCase();
-}
-
-function findMonth() {
-  const cur = normalize(getCurrentMonth());
-  return scheduleIndex.find(m => normalize(m.month) === cur);
+  return d.toLocaleString('ru-RU', { month: 'long' })
+    .replace(/^./, c => c.toUpperCase()) + ' ' + d.getFullYear();
 }
 
 function getCurrentWeekDay() {
-  const map = [
-    'Воскресенье',
-    'Понедельник',
-    'Вторник',
-    'Среда',
-    'Четверг',
-    'Пятница',
-    'Суббота'
-  ];
-  return map[new Date().getDay()];
+  return DAYS[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1];
 }
 
 function isNowInSlot(slotTime) {
@@ -230,17 +212,11 @@ function isNowInSlot(slotTime) {
   return now >= start && now <= end;
 }
 
-/* ===== ЗА ВСЁ ВРЕМЯ (индексный лист исключён) ===== */
-async function calculateAllTimeSum() {
-  let sum = 0;
+function normalize(s) {
+  return s.replace(/\s+/g, ' ').trim().toLowerCase();
+}
 
-  for (const m of scheduleIndex) {
-    const gid = m[activePool];
-    if (!gid || gid === SCHEDULE_INDEX_GID) continue;
-
-    const rows = await fetchCSV(gid);
-    // здесь твой расчёт суммы
-  }
-
-  return sum;
+function findMonth() {
+  const cur = normalize(getCurrentMonth());
+  return scheduleIndex.find(m => normalize(m.month) === cur);
 }
