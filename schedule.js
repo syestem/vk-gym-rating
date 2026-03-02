@@ -152,22 +152,28 @@ function renderDayTabs() {
 
 function renderDay() {
   content.innerHTML = '';
-  parsed[activeDay].forEach(slot => {
-    const div = document.createElement('div');
-    div.className = 'slot';
 
-    const lanes = slot.lanes.map(l =>
+  parsed[activeDay].forEach(slot => {
+    const freeCount = slot.lanes.filter(l => !l.busy).length;
+
+    const lanesHtml = slot.lanes.map(l =>
       `<span class="lane ${l.busy ? 'busy' : 'free'}">${l.lane}</span>`
     ).join('');
 
+    const div = document.createElement('div');
+    div.className = 'slot';
+
     div.innerHTML = `
-      <div class="time">${slot.time}</div>
-      <div class="lanes">${lanes}</div>
+      <div class="time">
+        ${slot.time}
+        <span class="count">Свободно: ${freeCount}/${slot.lanes.length}</span>
+      </div>
+      <div class="lanes">${lanesHtml}</div>
     `;
+
     content.appendChild(div);
   });
 }
-
 /* ===== HELPERS ===== */
 function isDay(s) {
   return /Понедельник|Вторник|Среда|Четверг|Пятница|Суббота|Воскресенье/.test(s);
