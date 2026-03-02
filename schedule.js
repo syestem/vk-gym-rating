@@ -85,55 +85,54 @@ function parseLaneSchedule(rows) {
 
   const result = {};
 
-  // 1. Время (строка "время на воде")
-  const timeRow = rows.find(r =>
+  // 1. Находим строку "время на воде"
+  const timeRowIndex = rows.findIndex(r =>
     r[0] && r[0].toLowerCase().includes('время')
   );
+  if (timeRowIndex === -1) return result;
 
-  if (!timeRow) return result;
+  // 2. Определяем временные колонки (по шаблону 6:25-7:10)
+  const times = [];
+  const timeCols = [];
 
-  // Берём только реальные временные слоты (C..W)
-  const times = timeRow
-    .slice(2)
-    .filter(t => /\d{1,2}:\d{2}/.test(t));
+  rows[timeRowIndex].forEach((cell, col) => {
+    if (/\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/.test(cell)) {
+      times.push(cell.trim());
+      timeCols.push(col);
+    }
+  });
 
-  let i = 0;
-  while (i < rows.length) {
+  // 3. Идём построчно, без прыжков
+  for (let i = timeRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
+    if (!row || !row[0]) continue;
 
-    // 2. Начало дня
-    if (row[0] && DAYS.includes(row[0])) {
+    if (DAYS.includes(row[0])) {
       const day = row[0];
-      result[day] = times.map(t => ({
-        time: t,
-        lanes: []
-      }));
+      result[day] = times.map(t => ({ time: t, lanes: [] }));
 
-      // 3. Следующие 6 строк — дорожки
-      for (let l = 1; l <= 6; l++) {
-        const laneRow = rows[i + l];
-        const laneNumber = Number(laneRow[1]);
-        if (!laneNumber) continue;
-
-        times.forEach((_, tIndex) => {
-          const cell = laneRow[tIndex + 2];
-          result[day][tIndex].lanes.push({
-            lane: laneNumber,
-            busy: Boolean(cell && cell.trim())
+      // 4. Читаем строки дорожек до следующего дня
+      let r = i + 1;
+      while (r < rows.length && !DAYS.includes(rows[r]?.[0])) {
+        const lane = Number(rows[r]?.[1]);
+        if (lane) {
+          timeCols.forEach((col, idx) => {
+            const cell = rows[r][col];
+            result[day][idx].lanes.push({
+              lane,
+              busy: Boolean(cell && cell.trim())
+            });
           });
-        });
+        }
+        r++;
       }
 
-      i += 7; // перескакиваем блок дня
-      continue;
+      i = r - 1; // продолжаем с конца блока
     }
-
-    i++;
   }
 
   return result;
 }
-
 /* ===== RENDER ===== */
 function renderDayTabs() {
   dayTabs.innerHTML = '';
