@@ -19,6 +19,7 @@ if (isVK) {
    CONSTANTS & DOM
 ================================ */
 const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
+const SHEET_ID_TIMETABLE = '11yaPysnuMfkXtwvZSOOohogKnvT0py7rWuKNyAs5ud8';
 const MONTHS_SHEET_GID = 1410034609;
 
 const tbody = document.getElementById('tbody');
@@ -310,7 +311,7 @@ function openSchedule() {
     ' ' + now.getFullYear();
 
   fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MONTHS_SHEET_GID}`
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${MONTHS_SHEET_GID}`
   )
     .then(r => r.text())
     .then(text => {
