@@ -33,8 +33,12 @@ async function init() {
     content.textContent = 'Нет данных по выбранному бассейну';
     return;
   }
+  for (const gid of gids) {
+    if (gid === SCHEDULE_INDEX_GID) continue;
 
-  const rows = await fetchCSV(entry[activePool]);
+    const rows = await fetchCSV(gid);
+  // расчёт суммы
+  }
   parsed = parseLaneSchedule(rows);
 
   renderDayTabs();
@@ -64,6 +68,8 @@ async function loadIndex() {
 }
 
 async function fetchCSV(gid) {
+  if (gid === SCHEDULE_INDEX_GID) return [];
+
   const text = await fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${gid}`
   ).then(r => r.text());
