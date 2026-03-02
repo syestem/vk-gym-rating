@@ -19,9 +19,7 @@ if (isVK) {
    CONSTANTS & DOM
 ================================ */
 const SHEET_ID = '1fz_CeBp5yXH3qwvgYGQXY77nHZXoq3JMn6BqPZQ--Og';
-const SHEET_ID_TIMETABLE = '11yaPysnuMfkXtwvZSOOohogKnvT0py7rWuKNyAs5ud8';
 const MONTHS_SHEET_GID = 1410034609;
-const SCHEDULE_INDEX_GID = 887181046;
 
 const tbody = document.getElementById('tbody');
 const loader = document.getElementById('loader');
@@ -33,27 +31,7 @@ const allTimeBtn = document.getElementById('allTime');
 
 const currentPeriodEl = document.getElementById('currentPeriod');
 const activeViewEl = document.getElementById('activeView');
-const showScheduleBtn = document.getElementById('showSchedule');
-const scheduleModal = document.getElementById('scheduleModal');
-const closeScheduleBtn = document.getElementById('closeSchedule');
-const scheduleContent = document.getElementById('scheduleContent');
-const scheduleTitle = document.getElementById('scheduleTitle');
-const scheduleTabs = document.querySelectorAll('.schedule-tabs button');
 
-let scheduleGids = { big: null, small: null };
-let activeScheduleType = 'big';
-let scheduleIndex = []; // данные из gid 887181046
-
-closeScheduleBtn.onclick = () => scheduleModal.classList.add('hidden');
-
-scheduleTabs.forEach(btn => {
-  btn.onclick = () => {
-    scheduleTabs.forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeScheduleType = btn.dataset.type;
-    loadSchedule();
-  };
-});
 /* ===============================
    STATE
 ================================ */
@@ -78,69 +56,6 @@ let abortController = null;
    LOAD MONTHS LIST
 ================================ */
 loadMonthsFromSheet();
-function loadScheduleIndex() {
-  return fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
-  )
-    .then(r => r.text())
-    .then(text => {
-      const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
-      scheduleIndex = [];
-
-      for (let i = 1; i < lines.length; i++) {
-        const c = lines[i].split(',');
-
-        const month = c[0]?.trim();   // Месяц
-        const big   = c[1]?.trim();   // gid большого
-        const small = c[2]?.trim();   // gid малого
-
-        if (!month) continue;
-
-        scheduleIndex.push({
-          month,
-          big: big ? Number(big) : null,
-          small: small ? Number(small) : null
-        });
-      }
-    });
-}
-showScheduleBtn.onclick = async () => {
-  if (scheduleIndex.length === 0) {
-    await loadScheduleIndex();
-  }
-
-  const now = new Date();
-  const currentMonth =
-    now.toLocaleString('ru-RU', { month: 'long' })
-      .replace(/^./, c => c.toUpperCase()) +
-    ' ' + now.getFullYear();
-
-  const normalize = s => s.replace(/\s+/g, ' ').trim().toLowerCase();
-
-const entry = scheduleIndex.find(
-  m => normalize(m.month) === normalize(currentMonth)
-);
-
-  if (!entry) {
-    scheduleContent.innerHTML = 'Нет расписания на этот месяц';
-    scheduleModal.classList.remove('hidden');
-    return;
-  }
-
-  scheduleGids.big = entry.big;
-  scheduleGids.small = entry.small;
-
-  scheduleTitle.textContent = currentMonth;
-  activeScheduleType = 'big';
-
-  document
-    .querySelectorAll('.schedule-tabs button')
-    .forEach(b => b.classList.toggle('active', b.dataset.type === 'big'));
-
-  scheduleModal.classList.remove('hidden');
-  loadSchedule();
-};
-
 
 function loadMonthsFromSheet() {
   abortController = new AbortController();
@@ -221,11 +136,7 @@ function abortFetch() {
   tbody.innerHTML = '';
   document.body.classList.add('loading');
 }
-function fetchScheduleCSV(gid) {
-  return fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${gid}`
-  ).then(r => r.text());
-}
+
 function fetchCSV(gid) {
   return fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`,
@@ -370,27 +281,4 @@ function render() {
 
   // 🔴 ВАЖНО: снимаем loading после успешного рендера
   document.body.classList.remove('loading');
-}
-
-function loadSchedule() {
-  const gid = scheduleGids[activeScheduleType];
-  if (!gid) {
-    scheduleContent.innerHTML = 'Нет данных';
-    return;
-  }
-
-  fetchScheduleCSV(gid).then(text => {
-    const lines = text.split(/\r?\n/);
-    let html = '<table>';
-
-    lines.forEach((line, i) => {
-      const c = line.split(',');
-      html += '<tr>' + c.map(v =>
-        `<td>${v}</td>`
-      ).join('') + '</tr>';
-    });
-
-    html += '</table>';
-    scheduleContent.innerHTML = html;
-  });
 }
