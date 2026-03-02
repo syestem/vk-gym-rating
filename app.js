@@ -44,7 +44,6 @@ let scheduleGids = { big: null, small: null };
 let activeScheduleType = 'big';
 let scheduleIndex = []; // данные из gid 887181046
 
-showScheduleBtn.onclick = () => openSchedule();
 closeScheduleBtn.onclick = () => scheduleModal.classList.add('hidden');
 
 scheduleTabs.forEach(btn => {
@@ -216,7 +215,11 @@ function abortFetch() {
   tbody.innerHTML = '';
   document.body.classList.add('loading');
 }
-
+function fetchScheduleCSV(gid) {
+  return fetch(
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${gid}`
+  ).then(r => r.text());
+}
 function fetchCSV(gid) {
   return fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`,
@@ -362,34 +365,7 @@ function render() {
   // 🔴 ВАЖНО: снимаем loading после успешного рендера
   document.body.classList.remove('loading');
 }
-function openSchedule() {
-  const now = new Date();
-  const monthName =
-    now.toLocaleString('ru-RU', { month: 'long' })
-      .replace(/^./, m => m.toUpperCase()) +
-    ' ' + now.getFullYear();
 
-  fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${MONTHS_SHEET_GID}`
-  )
-    .then(r => r.text())
-    .then(text => {
-      const lines = text.split(/\r?\n/);
-
-      for (let i = 1; i < lines.length; i++) {
-        const c = lines[i].split(',');
-        if (c[0] === monthName) {
-          scheduleGids.big = c[1];
-          scheduleGids.small = c[2];
-          break;
-        }
-      }
-
-      scheduleTitle.textContent = monthName;
-      scheduleModal.classList.remove('hidden');
-      loadSchedule();
-    });
-}
 function loadSchedule() {
   const gid = scheduleGids[activeScheduleType];
   if (!gid) {
@@ -397,7 +373,7 @@ function loadSchedule() {
     return;
   }
 
-  fetchCSV(gid).then(text => {
+  fetchScheduleCSV(gid).then(text => {
     const lines = text.split(/\r?\n/);
     let html = '<table>';
 
