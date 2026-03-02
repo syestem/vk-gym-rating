@@ -31,7 +31,7 @@ const allTimeBtn = document.getElementById('allTime');
 
 const currentPeriodEl = document.getElementById('currentPeriod');
 const activeViewEl = document.getElementById('activeView');
-
+const showScheduleBtn = document.getElementById('showSchedule');
 /* ===============================
    STATE
 ================================ */
