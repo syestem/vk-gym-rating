@@ -14,29 +14,27 @@ body {
 }
 
 .card {
-  max-width:640px;
+  max-width:720px;
   margin:0 auto;
   background:var(--card);
   border-radius:16px;
   padding:16px;
 }
 
-.header {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+h2 {
+  margin:0 0 12px;
 }
 
 .controls {
   display:flex;
   gap:8px;
-  margin:12px 0;
+  margin-bottom:12px;
 }
 
 button {
   border:none;
   border-radius:10px;
-  padding:8px 12px;
+  padding:8px 14px;
   cursor:pointer;
   background:#e1e3e6;
 }
@@ -44,11 +42,6 @@ button {
 button.primary {
   background:var(--accent);
   color:#fff;
-}
-
-button.ghost {
-  background:none;
-  color:var(--accent);
 }
 
 .day-tabs {
@@ -66,18 +59,25 @@ button.ghost {
 .schedule-content {
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:12px;
 }
 
 .slot {
   background:#f9f9f9;
-  border-radius:12px;
+  border-radius:14px;
   padding:12px;
+}
+
+.slot.now {
+  border:2px solid var(--accent);
+  background:rgba(42,88,133,.08);
 }
 
 .time {
   font-weight:600;
   margin-bottom:8px;
+  display:flex;
+  justify-content:space-between;
 }
 
 .lanes {
@@ -100,12 +100,4 @@ button.ghost {
 
 .lane.free {
   background:#e1f3e8;
-}
-.slot.now {
-  border: 2px solid var(--accent);
-  background: rgba(42, 88, 133, 0.08);
-}
-
-.slot.now .time {
-  color: var(--accent);
 }
