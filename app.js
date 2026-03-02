@@ -286,7 +286,7 @@ function openSchedulePage() {
   // если это VK Mini App
   if (typeof vkBridge !== 'undefined') {
     vkBridge.send('VKWebAppOpenApp', {
-      app_id: YOUR_APP_ID,          // если одна и та же мини-аппа
+      app_id: app54462205,          // если одна и та же мини-аппа
       location: 'schedule'
     });
   } else {
