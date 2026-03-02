@@ -15,11 +15,13 @@ let scheduleIndex = [];
 let parsed = {};
 let activeDay = null;
 let activePool = 'big';
+let onlyFree = false;
 
 const content = document.getElementById('scheduleContent');
 const dayTabs = document.getElementById('dayTabs');
 const titleEl = document.getElementById('title');
 const poolButtons = document.querySelectorAll('[data-pool]');
+const onlyFreeBtn = document.getElementById('onlyFreeBtn');
 
 init();
 
@@ -36,6 +38,12 @@ async function init() {
       init();
     };
   });
+
+  onlyFreeBtn.onclick = () => {
+    onlyFree = !onlyFree;
+    onlyFreeBtn.classList.toggle('primary', onlyFree);
+    renderDay();
+  };
 
   if (scheduleIndex.length === 0) {
     await loadIndex();
@@ -55,6 +63,7 @@ async function init() {
 
   renderDayTabs();
   renderDay();
+  scheduleMidnightSwitch();
 }
 
 /* ================= FETCH ================= */
@@ -117,7 +126,7 @@ function parseLaneSchedule(rows) {
       let r = i + 1;
       while (r < rows.length && !DAYS.includes(rows[r]?.[0])) {
         const lane = Number(rows[r]?.[1]);
-        if (lane) {
+        if (lane >= 1 && lane <= 6) {
           timeCols.forEach((col, idx) => {
             const cell = rows[r][col];
             result[day][idx].lanes.push({
@@ -128,11 +137,9 @@ function parseLaneSchedule(rows) {
         }
         r++;
       }
-
       i = r - 1;
     }
   }
-
   return result;
 }
 
@@ -155,11 +162,16 @@ function renderDayTabs() {
 
 function renderDay() {
   content.innerHTML = '';
+  const today = getCurrentWeekDay();
 
   parsed[activeDay].forEach(slot => {
     const total = slot.lanes.length;
+    if (!total) return;
+
     const free = slot.lanes.filter(l => !l.busy).length;
-    const isNow = isNowInSlot(slot.time);
+    if (onlyFree && free === 0) return;
+
+    const isNow = activeDay === today && isNowInSlot(slot.time);
 
     const lanesHtml = slot.lanes.map(l =>
       `<span class="lane ${l.busy ? 'busy' : 'free'}">${l.lane}</span>`
@@ -172,6 +184,7 @@ function renderDay() {
       <div class="time">
         ${slot.time}
         <span class="count">Свободно: ${free}/${total}</span>
+        ${isNow ? '<span class="badge">СЕЙЧАС</span>' : ''}
       </div>
       <div class="lanes">${lanesHtml}</div>
     `;
@@ -179,12 +192,14 @@ function renderDay() {
     content.appendChild(div);
   });
 
-  setTimeout(() => {
-    const nowSlot = document.querySelector('.slot.now');
-    if (nowSlot) {
-      nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, 0);
+  if (activeDay === today) {
+    setTimeout(() => {
+      const nowSlot = document.querySelector('.slot.now');
+      if (nowSlot) {
+        nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 0);
+  }
 }
 
 /* ================= HELPERS ================= */
@@ -219,4 +234,23 @@ function normalize(s) {
 function findMonth() {
   const cur = normalize(getCurrentMonth());
   return scheduleIndex.find(m => normalize(m.month) === cur);
+}
+
+/* ================= MIDNIGHT SWITCH ================= */
+
+function scheduleMidnightSwitch() {
+  const now = new Date();
+  const msToMidnight =
+    new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() -
+    now.getTime();
+
+  setTimeout(() => {
+    const today = getCurrentWeekDay();
+    if (parsed[today]) {
+      activeDay = today;
+      renderDayTabs();
+      renderDay();
+    }
+    scheduleMidnightSwitch();
+  }, msToMidnight + 1000);
 }
