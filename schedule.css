@@ -101,3 +101,11 @@ button.ghost {
 .lane.free {
   background:#e1f3e8;
 }
+.slot.now {
+  border: 2px solid var(--accent);
+  background: rgba(42, 88, 133, 0.08);
+}
+
+.slot.now .time {
+  color: var(--accent);
+}
