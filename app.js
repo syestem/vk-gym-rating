@@ -31,7 +31,27 @@ const allTimeBtn = document.getElementById('allTime');
 
 const currentPeriodEl = document.getElementById('currentPeriod');
 const activeViewEl = document.getElementById('activeView');
+const showScheduleBtn = document.getElementById('showSchedule');
+const scheduleModal = document.getElementById('scheduleModal');
+const closeScheduleBtn = document.getElementById('closeSchedule');
+const scheduleContent = document.getElementById('scheduleContent');
+const scheduleTitle = document.getElementById('scheduleTitle');
+const scheduleTabs = document.querySelectorAll('.schedule-tabs button');
 
+let scheduleGids = { big: null, small: null };
+let activeScheduleType = 'big';
+
+showScheduleBtn.onclick = () => openSchedule();
+closeScheduleBtn.onclick = () => scheduleModal.classList.add('hidden');
+
+scheduleTabs.forEach(btn => {
+  btn.onclick = () => {
+    scheduleTabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeScheduleType = btn.dataset.type;
+    loadSchedule();
+  };
+});
 /* ===============================
    STATE
 ================================ */
@@ -281,4 +301,54 @@ function render() {
 
   // 🔴 ВАЖНО: снимаем loading после успешного рендера
   document.body.classList.remove('loading');
+}
+function openSchedule() {
+  const now = new Date();
+  const monthName =
+    now.toLocaleString('ru-RU', { month: 'long' })
+      .replace(/^./, m => m.toUpperCase()) +
+    ' ' + now.getFullYear();
+
+  fetch(
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MONTHS_SHEET_GID}`
+  )
+    .then(r => r.text())
+    .then(text => {
+      const lines = text.split(/\r?\n/);
+
+      for (let i = 1; i < lines.length; i++) {
+        const c = lines[i].split(',');
+        if (c[0] === monthName) {
+          scheduleGids.big = c[1];
+          scheduleGids.small = c[2];
+          break;
+        }
+      }
+
+      scheduleTitle.textContent = monthName;
+      scheduleModal.classList.remove('hidden');
+      loadSchedule();
+    });
+}
+function loadSchedule() {
+  const gid = scheduleGids[activeScheduleType];
+  if (!gid) {
+    scheduleContent.innerHTML = 'Нет данных';
+    return;
+  }
+
+  fetchCSV(gid).then(text => {
+    const lines = text.split(/\r?\n/);
+    let html = '<table>';
+
+    lines.forEach((line, i) => {
+      const c = line.split(',');
+      html += '<tr>' + c.map(v =>
+        `<td>${v}</td>`
+      ).join('') + '</tr>';
+    });
+
+    html += '</table>';
+    scheduleContent.innerHTML = html;
+  });
 }
