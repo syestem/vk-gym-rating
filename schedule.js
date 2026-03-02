@@ -1,61 +1,21 @@
-/* ===============================
-   CONFIG
-================================ */
 const SHEET_ID_TIMETABLE = '11yaPysnuMfkXtwvZSOOohogKnvT0py7rWuKNyAs5ud8';
 const SCHEDULE_INDEX_GID = 887181046;
 
-/* ===============================
-   STATE
-================================ */
 let scheduleIndex = [];
-let parsedSchedule = {};
+let parsed = {};
 let activeDay = null;
 let activePool = 'big';
 
-/* ===============================
-   DOM
-================================ */
 const content = document.getElementById('scheduleContent');
 const dayTabs = document.getElementById('dayTabs');
 const titleEl = document.getElementById('title');
 const backBtn = document.getElementById('backBtn');
 const poolButtons = document.querySelectorAll('[data-pool]');
 
-/* ===============================
-   INIT
-================================ */
 init();
 
 async function init() {
   titleEl.textContent = getCurrentMonth();
-  bindUI();
-
-  await loadScheduleIndex();
-  const entry = findCurrentMonthEntry();
-
-  if (!entry) {
-    content.textContent = 'Нет расписания на этот месяц';
-    return;
-  }
-
-  const gid = entry[activePool];
-  if (!gid) {
-    content.textContent = 'Нет данных по выбранному бассейну';
-    return;
-  }
-
-  const rows = await fetchCSV(gid);
-  parsedSchedule = parseSchedule(rows);
-
-  renderDayTabs();
-  setDefaultDay();
-  renderDay();
-}
-
-/* ===============================
-   UI
-================================ */
-function bindUI() {
   backBtn.onclick = () => history.back();
 
   poolButtons.forEach(btn => {
@@ -63,22 +23,34 @@ function bindUI() {
       poolButtons.forEach(b => b.classList.remove('primary'));
       btn.classList.add('primary');
       activePool = btn.dataset.pool;
-      init(); // перезагружаем под другой бассейн
+      init();
     };
   });
+
+  await loadIndex();
+  const entry = findMonth();
+
+  if (!entry || !entry[activePool]) {
+    content.textContent = 'Нет данных по выбранному бассейну';
+    return;
+  }
+
+  const rows = await fetchCSV(entry[activePool]);
+  parsed = parseLaneSchedule(rows);
+
+  renderDayTabs();
+  activeDay = Object.keys(parsed)[0];
+  renderDay();
 }
 
-/* ===============================
-   DATA LOAD
-================================ */
-async function loadScheduleIndex() {
+async function loadIndex() {
   const text = await fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
   ).then(r => r.text());
 
   const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/);
-
   scheduleIndex = [];
+
   for (let i = 1; i < lines.length; i++) {
     const c = lines[i].split(',');
     if (!c[0]) continue;
@@ -99,36 +71,48 @@ async function fetchCSV(gid) {
   return text.replace(/^\uFEFF/, '').split(/\r?\n/).map(r => r.split(','));
 }
 
-/* ===============================
-   PARSER
-================================ */
-function parseSchedule(rows) {
-  const days = rows[0].slice(1); // заголовки дней
+/* ===== PARSER ===== */
+function parseLaneSchedule(rows) {
   const result = {};
-  days.forEach(d => result[d] = []);
+  let currentDay = null;
+  let timeSlots = [];
 
-  for (let i = 1; i < rows.length; i++) {
-    const time = rows[i][0];
-    if (!time) continue;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
 
-    for (let d = 0; d < days.length; d++) {
-      const cell = rows[i][d + 1]?.trim();
-      result[days[d]].push({
-        time,
-        busy: Boolean(cell),
-        raw: cell || ''
+    if (row[0] && isDay(row[0])) {
+      currentDay = row[0];
+      result[currentDay] = [];
+      continue;
+    }
+
+    if (row.some(c => /\d{1,2}:\d{2}[-–]\d{1,2}:\d{2}/.test(c))) {
+      timeSlots = row.slice(2);
+      timeSlots.forEach(t => {
+        result[currentDay].push({ time: t, lanes: [] });
+      });
+      continue;
+    }
+
+    const lane = Number(row[1]);
+    if (!lane || !currentDay) continue;
+
+    for (let t = 0; t < timeSlots.length; t++) {
+      const cell = row[t + 2];
+      result[currentDay][t].lanes.push({
+        lane,
+        busy: Boolean(cell && cell.trim())
       });
     }
   }
+
   return result;
 }
 
-/* ===============================
-   RENDER
-================================ */
+/* ===== RENDER ===== */
 function renderDayTabs() {
   dayTabs.innerHTML = '';
-  Object.keys(parsedSchedule).forEach(day => {
+  Object.keys(parsed).forEach(day => {
     const btn = document.createElement('button');
     btn.textContent = day;
     btn.className = day === activeDay ? 'active' : '';
@@ -141,43 +125,39 @@ function renderDayTabs() {
   });
 }
 
-function setDefaultDay() {
-  activeDay = Object.keys(parsedSchedule)[0];
-}
-
 function renderDay() {
   content.innerHTML = '';
-
-  parsedSchedule[activeDay].forEach(slot => {
+  parsed[activeDay].forEach(slot => {
     const div = document.createElement('div');
-    div.className = `slot ${slot.busy ? 'busy' : 'free'}`;
+    div.className = 'slot';
+
+    const lanes = slot.lanes.map(l =>
+      `<span class="lane ${l.busy ? 'busy' : 'free'}">${l.lane}</span>`
+    ).join('');
+
     div.innerHTML = `
       <div class="time">${slot.time}</div>
-      <div class="status">
-        ${slot.busy ? '🔴 ЗАНЯТО' : '🟢 СВОБОДНО'}
-      </div>
+      <div class="lanes">${lanes}</div>
     `;
     content.appendChild(div);
   });
 }
 
-/* ===============================
-   HELPERS
-================================ */
+/* ===== HELPERS ===== */
+function isDay(s) {
+  return /Понедельник|Вторник|Среда|Четверг|Пятница|Суббота|Воскресенье/.test(s);
+}
+
 function getCurrentMonth() {
   const d = new Date();
-  return (
-    d.toLocaleString('ru-RU', { month: 'long' })
-      .replace(/^./, c => c.toUpperCase()) +
-    ' ' + d.getFullYear()
-  );
+  return d.toLocaleString('ru-RU', { month: 'long' }).replace(/^./, c => c.toUpperCase()) + ' ' + d.getFullYear();
 }
 
 function normalize(s) {
   return s.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-function findCurrentMonthEntry() {
-  const current = normalize(getCurrentMonth());
-  return scheduleIndex.find(m => normalize(m.month) === current);
+function findMonth() {
+  const cur = normalize(getCurrentMonth());
+  return scheduleIndex.find(m => normalize(m.month) === cur);
 }
