@@ -16,7 +16,7 @@ init();
 
 async function init() {
   titleEl.textContent = `Расписание бассейна на ${getCurrentMonth()}`;
-  
+
   poolButtons.forEach(btn => {
     btn.onclick = () => {
       poolButtons.forEach(b => b.classList.remove('primary'));
@@ -33,12 +33,8 @@ async function init() {
     content.textContent = 'Нет данных по выбранному бассейну';
     return;
   }
-  for (const gid of gids) {
-    if (gid === SCHEDULE_INDEX_GID) continue;
 
-    const rows = await fetchCSV(gid);
-  // расчёт суммы
-  }
+  const rows = await fetchCSV(entry[activePool]);
   parsed = parseLaneSchedule(rows);
 
   renderDayTabs();
@@ -47,6 +43,7 @@ async function init() {
   renderDay();
 }
 
+/* ===== ИНДЕКС ===== */
 async function loadIndex() {
   const text = await fetch(
     `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
@@ -67,6 +64,7 @@ async function loadIndex() {
   }
 }
 
+/* ===== CSV ===== */
 async function fetchCSV(gid) {
   if (gid === SCHEDULE_INDEX_GID) return [];
 
@@ -77,7 +75,7 @@ async function fetchCSV(gid) {
   return text.replace(/^\uFEFF/, '').split(/\r?\n/).map(r => r.split(','));
 }
 
-/* ===== PARSER ===== */
+/* ===== ПАРСЕР ===== */
 function parseLaneSchedule(rows) {
   const DAYS = [
     'Понедельник',
@@ -91,13 +89,11 @@ function parseLaneSchedule(rows) {
 
   const result = {};
 
-  // 1. Находим строку "время на воде"
   const timeRowIndex = rows.findIndex(r =>
     r[0] && r[0].toLowerCase().includes('время')
   );
   if (timeRowIndex === -1) return result;
 
-  // 2. Определяем временные колонки (по шаблону 6:25-7:10)
   const times = [];
   const timeCols = [];
 
@@ -108,7 +104,6 @@ function parseLaneSchedule(rows) {
     }
   });
 
-  // 3. Идём построчно, без прыжков
   for (let i = timeRowIndex + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || !row[0]) continue;
@@ -117,7 +112,6 @@ function parseLaneSchedule(rows) {
       const day = row[0];
       result[day] = times.map(t => ({ time: t, lanes: [] }));
 
-      // 4. Читаем строки дорожек до следующего дня
       let r = i + 1;
       while (r < rows.length && !DAYS.includes(rows[r]?.[0])) {
         const lane = Number(rows[r]?.[1]);
@@ -133,12 +127,13 @@ function parseLaneSchedule(rows) {
         r++;
       }
 
-      i = r - 1; // продолжаем с конца блока
+      i = r - 1;
     }
   }
 
   return result;
 }
+
 /* ===== RENDER ===== */
 function renderDayTabs() {
   dayTabs.innerHTML = '';
@@ -179,23 +174,25 @@ function renderDay() {
     `;
 
     content.appendChild(div);
-    
   });
+
   setTimeout(() => {
-  const nowSlot = document.querySelector('.slot.now');
-  if (nowSlot) {
-    nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-}, 0);
-}
-/* ===== HELPERS ===== */
-function isDay(s) {
-  return /Понедельник|Вторник|Среда|Четверг|Пятница|Суббота|Воскресенье/.test(s);
+    const nowSlot = document.querySelector('.slot.now');
+    if (nowSlot) {
+      nowSlot.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, 0);
 }
 
+/* ===== HELPERS ===== */
 function getCurrentMonth() {
   const d = new Date();
-  return d.toLocaleString('ru-RU', { month: 'long' }).replace(/^./, c => c.toUpperCase()) + ' ' + d.getFullYear();
+  return (
+    d.toLocaleString('ru-RU', { month: 'long' })
+      .replace(/^./, c => c.toUpperCase()) +
+    ' ' +
+    d.getFullYear()
+  );
 }
 
 function normalize(s) {
@@ -206,6 +203,7 @@ function findMonth() {
   const cur = normalize(getCurrentMonth());
   return scheduleIndex.find(m => normalize(m.month) === cur);
 }
+
 function getCurrentWeekDay() {
   const map = [
     'Воскресенье',
@@ -218,6 +216,7 @@ function getCurrentWeekDay() {
   ];
   return map[new Date().getDay()];
 }
+
 function isNowInSlot(slotTime) {
   const now = new Date();
 
@@ -229,4 +228,19 @@ function isNowInSlot(slotTime) {
   });
 
   return now >= start && now <= end;
+}
+
+/* ===== ЗА ВСЁ ВРЕМЯ (индексный лист исключён) ===== */
+async function calculateAllTimeSum() {
+  let sum = 0;
+
+  for (const m of scheduleIndex) {
+    const gid = m[activePool];
+    if (!gid || gid === SCHEDULE_INDEX_GID) continue;
+
+    const rows = await fetchCSV(gid);
+    // здесь твой расчёт суммы
+  }
+
+  return sum;
 }
