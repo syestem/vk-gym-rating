@@ -80,7 +80,7 @@ let abortController = null;
 loadMonthsFromSheet();
 function loadScheduleIndex() {
   return fetch(
-    `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
+    `https://docs.google.com/spreadsheets/d/${SHEET_ID_TIMETABLE}/export?format=csv&gid=${SCHEDULE_INDEX_GID}`
   )
     .then(r => r.text())
     .then(text => {
@@ -115,7 +115,11 @@ showScheduleBtn.onclick = async () => {
       .replace(/^./, c => c.toUpperCase()) +
     ' ' + now.getFullYear();
 
-  const entry = scheduleIndex.find(m => m.month === currentMonth);
+  const normalize = s => s.replace(/\s+/g, ' ').trim().toLowerCase();
+
+const entry = scheduleIndex.find(
+  m => normalize(m.month) === normalize(currentMonth)
+);
 
   if (!entry) {
     scheduleContent.innerHTML = 'Нет расписания на этот месяц';
