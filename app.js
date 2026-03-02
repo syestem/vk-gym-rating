@@ -136,6 +136,8 @@ showScheduleBtn.onclick = async () => {
   scheduleModal.classList.remove('hidden');
   loadSchedule();
 };
+
+
 function loadMonthsFromSheet() {
   abortController = new AbortController();
 
